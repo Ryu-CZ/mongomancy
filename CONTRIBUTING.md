@@ -5,7 +5,7 @@ also provides data definition layer.
 
 ## Getting Started
 
-* Make sure you have a GitLab account.
+* Make sure you have a GitHub account.
 * Submit a ticket for your issue, assuming one does not already exist.
     * Clearly describe the issue including steps to reproduce when it is a bug.
     * Make sure you fill in the earliest version that you know has the issue.
