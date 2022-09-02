@@ -1,0 +1,57 @@
+[build-system]
+requires = ["setuptools>=65"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "mongomancy"
+dynamic = ["version", ]
+authors = [
+    { name = "Tom Trval", email = "thandeus@gmail.com" },
+]
+description = "Pymongo based python client with data definition layer."
+readme = "README.md"
+license = { text = "GNU General Public License v3 (GPLv3)" }
+requires-python = ">=3.10"
+dependencies = [
+    'pymongo>=4.0',
+]
+keywords = [
+    "mongo",
+    "python",
+    "pymongo",
+    "database",
+    "nosql",
+]
+classifiers = [
+    "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
+    "Operating System :: OS Independent",
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Topic :: Database",
+    "Programming Language :: Python :: 3",
+    "Typing :: Typed",
+]
+
+[project.urls]
+"Homepage" = "https://github.com/Ryu-CZ/mongomancy"
+"Bug Tracker" = "https://github.com/Ryu-CZ/mongomancy/issues"
+
+[options]
+test_suite = "tests"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+packages = ["mongomancy", ]
+
+[tool.setuptools.dynamic]
+version = {attr = "mongomancy.__version__"}
+
+[coverage.run]
+branch = true
+source = [
+    "src/mongomancy",
+    "tests",
+]
+
+[coverage.paths]
+source = "mongomancy"
