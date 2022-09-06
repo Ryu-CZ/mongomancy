@@ -6,8 +6,8 @@ from typing import (
     List, Tuple, Sequence, Union, Optional, Mapping, Dict, Any, Iterable, Callable
 )
 
-import pymongo.results
 import pymongo.database
+import pymongo.results
 from bson import ObjectId
 
 __all__ = (

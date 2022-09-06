@@ -150,14 +150,15 @@ class Database:
             name: str,
             logger: LoggerType,
             engine: types.Executor,
-            *definitions: types.CollectionDefinition,
+            *collections: types.CollectionDefinition,
     ) -> None:
         self._collections = {}
         self.topology = []
         self.logger = logger
         self.engine = engine
         self._database = engine.get_database(name)
-        self.extend(*definitions)
+        for coll in collections:
+            self.add_collection(coll)
         self.engine.register_hook(reconnect_hook=self.invalidate_cache_hook)
 
     def __getitem__(self, item: str) -> Collection:
@@ -165,10 +166,10 @@ class Database:
             raise KeyError(f"collection {item!r} not found")
         return self._collections[item]
 
-    def __contains__(self, item):
+    def __contains__(self, item) -> bool:
         return item in self._collections
 
-    def __getattr__(self, item):
+    def __getattr__(self, item) -> Collection:
         if item in self._collections:
             return self._collections[item]
         return object.__getattr__(self, item)
@@ -204,13 +205,13 @@ class Database:
             raise KeyError(f"collection {name!r} not found")
         return self._collections[name]
 
-    def extend(self, *new_definitions: types.CollectionDefinition) -> None:
+    def add_collection(self, new_definitions: types.CollectionDefinition) -> None:
         """
-        Add new collection definitions into this `topology`.
+        Add new collection definitions into `self.topology`.
 
-        :param new_definitions: add these collection definitions
+        :param new_definitions: add the collection definition
         """
-        self.topology.extend(new_definitions)
+        self.topology.append(new_definitions)
 
     def create_all(self, skip_existing: bool = True) -> None:
         """
