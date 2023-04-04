@@ -1,14 +1,26 @@
 import abc
 import datetime as dt
+import sys
 from dataclasses import dataclass, field
 from typing import (
-    OrderedDict as OrderedDictType,
-    List, Tuple, Sequence, Union, Optional, Mapping, Dict, Any, Iterable, Callable
+    OrderedDict,
+    List,
+    Tuple,
+    Sequence,
+    Union,
+    Optional,
+    Mapping,
+    Dict,
+    Any,
+    Iterable,
+    Callable,
+    TypeVar,
 )
 
 import pymongo.database
 import pymongo.results
 from bson import ObjectId
+from pymongo.command_cursor import CommandCursor
 
 __all__ = (
     "Bson",
@@ -18,11 +30,16 @@ __all__ = (
     "Document",
     "CollectionDefinition",
     "Executor",
+    "CommandCursor",
 )
 
 Bson = Union[None, int, float, bool, str, ObjectId, dt.datetime, Sequence["Bson"], Mapping[str, "Bson"]]
 BsonDict = Mapping[str, Bson]
 BsonList = Sequence[Bson]
+
+OrderedDictType = OrderedDict
+if sys.version_info >= 3.7:
+    OrderedDictType = TypeVar("OrderedDictType", bound=Dict)
 
 
 @dataclass(init=False)
@@ -181,6 +198,16 @@ class Executor(metaclass=abc.ABCMeta):
             *args,
             **kwargs,
     ) -> pymongo.results.DeleteResult:
+        ...
+
+    @abc.abstractmethod
+    def aggregate(
+            self,
+            collection: pymongo.collection.Collection,
+            pipeline: BsonList,
+            *args,
+            **kwargs,
+    ) -> pymongo.command_cursor.CommandCursor:
         ...
 
     @abc.abstractmethod

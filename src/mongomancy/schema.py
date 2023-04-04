@@ -114,6 +114,14 @@ class Collection:
     ) -> pymongo.results.DeleteResult:
         return self.engine.delete_many(self.mongo_collection, where, *args, **kwargs)
 
+    def aggregate(
+            self,
+            pipeline: Optional[types.List],
+            *args,
+            **kwargs,
+    ) -> pymongo.results.DeleteResult:
+        return self.engine.aggregate(self.mongo_collection, pipeline, *args, **kwargs)
+
 
 class Database:
     """

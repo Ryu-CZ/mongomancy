@@ -7,6 +7,7 @@ from typing import (
 )
 
 import pymongo
+import pymongo.command_cursor
 import pymongo.database
 import pymongo.results
 import pymongo.typings
@@ -20,6 +21,8 @@ __all__ = (
 
 LoggerType = Union[logging.Logger, logging.LoggerAdapter]
 _CommandReturn = TypeVar("_CommandReturn")
+
+ExecutorLike = TypeVar("ExecutorLike", bound=types.Executor)
 
 
 class Engine(types.Executor):
@@ -40,7 +43,7 @@ class Engine(types.Executor):
     read_retry_delay: Union[float, int]
     _address: str
     _connection_params: Mapping[str, Any]
-    reconnect_hooks: List[Callable[[types.Executor], None]]
+    reconnect_hooks: List[Callable[[ExecutorLike], None]]
 
     __slots__ = (
         "client",
@@ -152,7 +155,7 @@ class Engine(types.Executor):
         """
         return self.client.get_database(name)
 
-    def register_hook(self, reconnect_hook: Callable[[types.Executor], None]) -> None:
+    def register_hook(self, reconnect_hook: Callable[[ExecutorLike], None]) -> None:
         """
         Add hook to be called when client is reconnected.
 
@@ -296,6 +299,21 @@ class Engine(types.Executor):
             collection.find_one_and_update,
             where,
             changes,
+            *args,
+            **kwargs,
+        )
+
+    def aggregate(
+            self,
+            collection: pymongo.collection.Collection,
+            pipeline: types.BsonList,
+            *args,
+            **kwargs,
+    ) -> pymongo.command_cursor.CommandCursor:
+        return self._retry_command(
+            collection,
+            collection.aggregate,
+            pipeline,
             *args,
             **kwargs,
         )

@@ -8,6 +8,15 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+### Added
+
+- Collection and Engine now support `aggregate` method.
+
+### Fixed
+
+- Hooks typing now correctly allows any Executor subclass.
+- Index fields accepts dict type as valid ordered dict in python 3.7+ because it is guaranteed to keep order.
+
 ## [0.0.1] - 2022-08-29
 
 ### Added

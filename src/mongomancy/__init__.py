@@ -1,5 +1,5 @@
 """
-PyMongo abstraction layer with auto-reconnect and collection initialization support.
+Abstraction layer of PyMongo with auto-reconnect and collection initialization support.
 """
 __version__ = "0.0.2"
 
