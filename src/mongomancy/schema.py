@@ -7,6 +7,7 @@ from typing import (
 )
 
 import pymongo
+import pymongo.command_cursor
 import pymongo.database
 import pymongo.results
 import pymongo.typings
@@ -119,7 +120,7 @@ class Collection:
             pipeline: Optional[types.List],
             *args,
             **kwargs,
-    ) -> pymongo.results.DeleteResult:
+    ) -> pymongo.command_cursor.CommandCursor:
         return self.engine.aggregate(self.mongo_collection, pipeline, *args, **kwargs)
 
 

@@ -8,6 +8,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+## [0.0.4] - 2023-04-04
+
+### Fixed
+
+- Collection aggregate return type set to pymongo CommandCursor.
+
 ## [0.0.3] - 2023-04-04
 
 ### Added
