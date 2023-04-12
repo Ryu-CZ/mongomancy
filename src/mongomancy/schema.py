@@ -2,9 +2,7 @@ import logging
 import time
 import traceback
 from dataclasses import dataclass
-from typing import (
-    List, Tuple, Union, TypeVar, Mapping, Any, Optional, Dict, Iterable
-)
+from typing import List, Tuple, Union, TypeVar, Mapping, Any, Optional, Dict, Iterable
 
 import pymongo
 import pymongo.command_cursor
@@ -33,6 +31,7 @@ class Collection:
     Abstraction of existing collection.
     Wraps `pymongo.collection.Collection` for easier reconnect.
     """
+
     mongo_collection: pymongo.collection.Collection
     engine: types.Executor
 
@@ -41,85 +40,85 @@ class Collection:
         return self.mongo_collection.name
 
     def find_one(
-            self,
-            where: Optional[types.BsonDict],
-            *args,
-            **kwargs,
+        self,
+        where: Optional[types.BsonDict],
+        *args,
+        **kwargs,
     ) -> Optional[DocumentType]:
         return self.engine.find_one(self.mongo_collection, where, *args, **kwargs)
 
     def find(
-            self,
-            where: Optional[types.BsonDict],
-            *args,
-            **kwargs,
+        self,
+        where: Optional[types.BsonDict],
+        *args,
+        **kwargs,
     ) -> pymongo.cursor.Cursor[types.BsonDict]:
         return self.engine.find(self.mongo_collection, where, *args, **kwargs)
 
     def find_one_and_update(
-            self,
-            where: types.BsonDict,
-            changes: types.BsonDict | types.BsonList,
-            *args,
-            **kwargs,
+        self,
+        where: types.BsonDict,
+        changes: types.BsonDict | types.BsonList,
+        *args,
+        **kwargs,
     ) -> Optional[types.BsonDict]:
         return self.engine.find_one_and_update(self.mongo_collection, where, changes, *args, **kwargs)
 
     def update_one(
-            self,
-            where: Optional[types.BsonDict],
-            changes: types.BsonDict | types.BsonList,
-            *args,
-            **kwargs,
+        self,
+        where: Optional[types.BsonDict],
+        changes: types.BsonDict | types.BsonList,
+        *args,
+        **kwargs,
     ) -> pymongo.results.UpdateResult:
         return self.engine.update_one(self.mongo_collection, where, changes, *args, **kwargs)
 
     def update_many(
-            self,
-            where: Optional[types.BsonDict],
-            changes: types.BsonDict | types.BsonList,
-            *args,
-            **kwargs,
+        self,
+        where: Optional[types.BsonDict],
+        changes: types.BsonDict | types.BsonList,
+        *args,
+        **kwargs,
     ) -> pymongo.results.UpdateResult:
         return self.engine.update_many(self.mongo_collection, where, changes, *args, **kwargs)
 
     def insert_one(
-            self,
-            document: types.BsonDict,
-            *args,
-            **kwargs,
+        self,
+        document: types.BsonDict,
+        *args,
+        **kwargs,
     ) -> pymongo.results.InsertOneResult:
         return self.engine.insert_one(self.mongo_collection, document, *args, **kwargs)
 
     def insert_many(
-            self,
-            documents: Iterable[types.BsonDict],
-            *args,
-            **kwargs,
+        self,
+        documents: Iterable[types.BsonDict],
+        *args,
+        **kwargs,
     ) -> pymongo.results.InsertManyResult:
         return self.engine.insert_many(self.mongo_collection, documents, *args, **kwargs)
 
     def delete_one(
-            self,
-            where: Optional[types.BsonDict],
-            *args,
-            **kwargs,
+        self,
+        where: Optional[types.BsonDict],
+        *args,
+        **kwargs,
     ) -> pymongo.results.DeleteResult:
         return self.engine.delete_one(self.mongo_collection, where, *args, **kwargs)
 
     def delete_many(
-            self,
-            where: Optional[types.BsonDict],
-            *args,
-            **kwargs,
+        self,
+        where: Optional[types.BsonDict],
+        *args,
+        **kwargs,
     ) -> pymongo.results.DeleteResult:
         return self.engine.delete_many(self.mongo_collection, where, *args, **kwargs)
 
     def aggregate(
-            self,
-            pipeline: Optional[types.List],
-            *args,
-            **kwargs,
+        self,
+        pipeline: Optional[types.List],
+        *args,
+        **kwargs,
     ) -> pymongo.command_cursor.CommandCursor:
         return self.engine.aggregate(self.mongo_collection, pipeline, *args, **kwargs)
 
@@ -140,6 +139,7 @@ class Database:
         db["game"].find_one({"game_id": 1, "name": "game 1"})
 
     """
+
     engine: types.Executor
     topology: List[types.CollectionDefinition]
     _database: pymongo.database.Database
@@ -155,11 +155,11 @@ class Database:
     )
 
     def __init__(
-            self,
-            name: str,
-            logger: LoggerType,
-            engine: types.Executor,
-            *collections: types.CollectionDefinition,
+        self,
+        name: str,
+        logger: LoggerType,
+        engine: types.Executor,
+        *collections: types.CollectionDefinition,
     ) -> None:
         self._collections = {}
         self.topology = []
@@ -232,9 +232,9 @@ class Database:
             _ = self.create_collection(collection_definition, skip_existing)
 
     def create_collection(
-            self,
-            definition: types.CollectionDefinition,
-            skip_existing: bool = True,
+        self,
+        definition: types.CollectionDefinition,
+        skip_existing: bool = True,
     ) -> Collection:
         """
         Create new entity and bind it to this database.
@@ -267,8 +267,8 @@ class Database:
         return self.engine.ping(database=self.name)
 
     def _create_mongo_collection(
-            self,
-            definition: types.CollectionDefinition,
+        self,
+        definition: types.CollectionDefinition,
     ) -> Tuple[pymongo.collection.Collection, bool]:
         """
         Create a new collection in this database if not exists, return existing otherwise.
@@ -291,10 +291,10 @@ class Database:
         return new_collection, True
 
     def _create_indices(
-            self,
-            definition: types.CollectionDefinition,
-            mongo_collection: pymongo.collection.Collection,
-            silent: bool = True,
+        self,
+        definition: types.CollectionDefinition,
+        mongo_collection: pymongo.collection.Collection,
+        silent: bool = True,
     ) -> None:
         """
         Create indices if not exists on collection.
@@ -311,10 +311,10 @@ class Database:
                 self._create_index(mongo_collection, index, silent)
 
     def _create_index(
-            self,
-            mongo_collection: pymongo.collection.Collection,
-            index: types.Index,
-            silent: bool = True,
+        self,
+        mongo_collection: pymongo.collection.Collection,
+        index: types.Index,
+        silent: bool = True,
     ) -> None:
         """
         Create index over collection.
@@ -339,9 +339,9 @@ class Database:
             self.logger.warning(traceback.format_stack())
 
     def _insert_defaults(
-            self,
-            docs: Iterable[types.Document],
-            collection: Collection,
+        self,
+        docs: Iterable[types.Document],
+        collection: Collection,
     ) -> int:
         """
         Insert default data from definition into collection.

@@ -45,6 +45,7 @@ if sys.version_info >= 3.7:
 @dataclass(init=False)
 class Index:
     """Collection Index data container"""
+
     fields: OrderedDictType[str, Union[str, int]]
     name: Optional[str]
     unique: Optional[bool]
@@ -56,10 +57,10 @@ class Index:
     )
 
     def __init__(
-            self,
-            fields: OrderedDictType[str, Union[str, int]],
-            name: Optional[str] = None,
-            unique: Optional[bool] = False,
+        self,
+        fields: OrderedDictType[str, Union[str, int]],
+        name: Optional[str] = None,
+        unique: Optional[bool] = False,
     ) -> None:
         self.fields = fields
         self.name = name
@@ -78,6 +79,7 @@ class Document:
     Example:
         Document(unique_key={"color_name": "red"}, data={"color_name": "red", "color_hex": "#ff0000"})
     """
+
     unique_key: Optional[BsonDict]
     data: Bson
 
@@ -87,9 +89,14 @@ class CollectionDefinition:
     """
     Collection Definition of name and indexed field
     """
+
     name: str
-    indices: Sequence[Index] = field(default_factory=tuple, )
-    default_docs: Sequence[Document] = field(default_factory=tuple, )
+    indices: Sequence[Index] = field(
+        default_factory=tuple,
+    )
+    default_docs: Sequence[Document] = field(
+        default_factory=tuple,
+    )
 
     def fill_index_names(self):
         """
@@ -105,108 +112,109 @@ class Executor(metaclass=abc.ABCMeta):
     Reconnect-able interface of MongoDB mongo_driver that allows to execute commands like:
     `find`, `insert_one`, `update_many`, `delete_one`.
     """
+
     __slots__ = ()
 
     @abc.abstractmethod
     def find_one(
-            self,
-            collection: pymongo.collection.Collection,
-            where: Optional[BsonDict],
-            *args,
-            **kwargs,
+        self,
+        collection: pymongo.collection.Collection,
+        where: Optional[BsonDict],
+        *args,
+        **kwargs,
     ) -> Optional[Dict[str, Any]]:
         ...
 
     @abc.abstractmethod
     def find(
-            self,
-            collection: pymongo.collection.Collection,
-            where: Optional[BsonDict],
-            *args,
-            **kwargs,
+        self,
+        collection: pymongo.collection.Collection,
+        where: Optional[BsonDict],
+        *args,
+        **kwargs,
     ) -> pymongo.cursor.Cursor:
         ...
 
     @abc.abstractmethod
     def find_one_and_update(
-            self,
-            collection: pymongo.collection.Collection,
-            where: BsonDict,
-            changes: BsonDict | BsonList,
-            *args,
-            **kwargs,
+        self,
+        collection: pymongo.collection.Collection,
+        where: BsonDict,
+        changes: BsonDict | BsonList,
+        *args,
+        **kwargs,
     ) -> Optional[BsonDict]:
         ...
 
     @abc.abstractmethod
     def update_one(
-            self,
-            collection: pymongo.collection.Collection,
-            where: Optional[BsonDict],
-            changes: BsonDict | BsonList,
-            *args,
-            **kwargs,
+        self,
+        collection: pymongo.collection.Collection,
+        where: Optional[BsonDict],
+        changes: BsonDict | BsonList,
+        *args,
+        **kwargs,
     ) -> pymongo.results.UpdateResult:
         ...
 
     @abc.abstractmethod
     def update_many(
-            self,
-            collection: pymongo.collection.Collection,
-            where: Optional[BsonDict],
-            changes: BsonDict | BsonList,
-            *args,
-            **kwargs,
+        self,
+        collection: pymongo.collection.Collection,
+        where: Optional[BsonDict],
+        changes: BsonDict | BsonList,
+        *args,
+        **kwargs,
     ) -> pymongo.results.UpdateResult:
         ...
 
     @abc.abstractmethod
     def insert_one(
-            self,
-            collection: pymongo.collection.Collection,
-            document: Optional[BsonDict],
-            *args,
-            **kwargs,
+        self,
+        collection: pymongo.collection.Collection,
+        document: Optional[BsonDict],
+        *args,
+        **kwargs,
     ) -> pymongo.results.InsertOneResult:
         ...
 
     @abc.abstractmethod
     def insert_many(
-            self,
-            collection: pymongo.collection.Collection,
-            documents: Iterable[BsonDict],
-            *args,
-            **kwargs,
+        self,
+        collection: pymongo.collection.Collection,
+        documents: Iterable[BsonDict],
+        *args,
+        **kwargs,
     ) -> pymongo.results.InsertManyResult:
         ...
 
     @abc.abstractmethod
     def delete_one(
-            self,
-            collection: pymongo.collection.Collection,
-            where: Optional[BsonDict],
-            *args,
-            **kwargs,
+        self,
+        collection: pymongo.collection.Collection,
+        where: Optional[BsonDict],
+        *args,
+        **kwargs,
     ) -> pymongo.results.DeleteResult:
         ...
 
     @abc.abstractmethod
     def delete_many(
-            self,
-            collection: pymongo.collection.Collection,
-            where: Optional[BsonDict],
-            *args,
-            **kwargs,
+        self,
+        collection: pymongo.collection.Collection,
+        where: Optional[BsonDict],
+        *args,
+        **kwargs,
     ) -> pymongo.results.DeleteResult:
         ...
 
     @abc.abstractmethod
     def aggregate(
-            self,
-            collection: pymongo.collection.Collection,
-            pipeline: BsonList,
-            *args,
-            **kwargs,
+        self,
+        collection: pymongo.collection.Collection,
+        pipeline: BsonList,
+        *args,
+        **kwargs,
     ) -> pymongo.command_cursor.CommandCursor:
         ...
 

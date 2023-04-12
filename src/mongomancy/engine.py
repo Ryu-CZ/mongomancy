@@ -2,9 +2,7 @@ import atexit
 import logging
 import time
 import traceback
-from typing import (
-    List, Sequence, Union, Set, TypeVar, Mapping, Any, ClassVar, Type, Optional, Callable, Iterable
-)
+from typing import List, Sequence, Union, Set, TypeVar, Mapping, Any, ClassVar, Type, Optional, Callable, Iterable
 
 import pymongo
 import pymongo.command_cursor
@@ -15,9 +13,7 @@ from pymongo.errors import PyMongoError
 
 from . import mongo_errors, types
 
-__all__ = (
-    "Engine",
-)
+__all__ = ("Engine",)
 
 LoggerType = Union[logging.Logger, logging.LoggerAdapter]
 _CommandReturn = TypeVar("_CommandReturn")
@@ -29,6 +25,7 @@ class Engine(types.Executor):
     """
     Client of Mongo Database storage. All DB communication should be handled through this class.
     """
+
     CONNECTION_ERRORS: ClassVar[Type[pymongo.errors.PyMongoError]] = (
         pymongo.errors.AutoReconnect,
         pymongo.errors.ConnectionFailure,
@@ -60,23 +57,23 @@ class Engine(types.Executor):
     )
 
     def __init__(
-            self,
-            host: str = "localhost",
-            port: int = 27017,
-            max_pool_size: int = 1,
-            queue_timeout: int = 400,
-            auth_source: Optional[str] = None,
-            auth_mechanism: Optional[str] = None,
-            user: Optional[str] = "kanturek",
-            password: Optional[str] = "kajot",
-            connect_timeout: Optional[int] = 15000,
-            write_retry: int = 3,
-            write_retry_delay: Union[float, int] = 1.3,
-            read_retry: int = 2,
-            read_retry_delay: Union[float, int] = 0.701,
-            retry_codes: Optional[Sequence[int]] = None,
-            logger: Optional[LoggerType] = None,
-            **kwargs,
+        self,
+        host: str = "localhost",
+        port: int = 27017,
+        max_pool_size: int = 1,
+        queue_timeout: int = 400,
+        auth_source: Optional[str] = None,
+        auth_mechanism: Optional[str] = None,
+        user: Optional[str] = "kanturek",
+        password: Optional[str] = "kajot",
+        connect_timeout: Optional[int] = 15000,
+        write_retry: int = 3,
+        write_retry_delay: Union[float, int] = 1.3,
+        read_retry: int = 2,
+        read_retry_delay: Union[float, int] = 0.701,
+        retry_codes: Optional[Sequence[int]] = None,
+        logger: Optional[LoggerType] = None,
+        **kwargs,
     ) -> None:
         """
         Create connection engine for mongo(s) server.
@@ -209,13 +206,13 @@ class Engine(types.Executor):
         self.logger.info(f"{type(self).__qualname__} - reconnected client")
 
     def _retry_command(
-            self,
-            collection: pymongo.collection.Collection,
-            command: Callable[[...], _CommandReturn],
-            /,
-            *args,
-            command_name_: Optional[str] = None,
-            **kwargs,
+        self,
+        collection: pymongo.collection.Collection,
+        command: Callable[[...], _CommandReturn],
+        /,
+        *args,
+        command_name_: Optional[str] = None,
+        **kwargs,
     ) -> _CommandReturn:
         """
         Execute command and retry if error is caused by switched master in remote DB cluster.
@@ -238,8 +235,7 @@ class Engine(types.Executor):
             except pymongo.errors.AutoReconnect as e:
                 command_name_ = command_name_ or getattr(command, "__qualname__", "<unknown_command>")
                 self.logger.info(
-                    f"fail {attempt}/{self.write_retry} - {command_name_} "
-                    f"args={args}, kwargs={kwargs} e={e}"
+                    f"fail {attempt}/{self.write_retry} - {command_name_} " f"args={args}, kwargs={kwargs} e={e}"
                 )
                 _error = e
                 time.sleep(self.write_retry_delay)
@@ -247,13 +243,10 @@ class Engine(types.Executor):
             except pymongo.errors.WriteError as e:
                 command_name_ = command_name_ or getattr(command, "__qualname__", "<unknown_command>")
                 if e.code not in self.retry_codes:
-                    self.logger.error(
-                        f"failed to write - {command_name_} args={args}, kwargs={kwargs} e={e}"
-                    )
+                    self.logger.error(f"failed to write - {command_name_} args={args}, kwargs={kwargs} e={e}")
                     raise e from e
                 self.logger.info(
-                    f"fail {attempt}/{self.write_retry} - {command_name_} "
-                    f"args={args}, kwargs={kwargs} e={e}"
+                    f"fail {attempt}/{self.write_retry} - {command_name_} " f"args={args}, kwargs={kwargs} e={e}"
                 )
                 _error = e
                 time.sleep(self.write_retry_delay)
@@ -262,37 +255,35 @@ class Engine(types.Executor):
                 collection = self.client[collection.database.name][collection.name]
         if _error:
             command_name_ = command_name_ or getattr(command, "__qualname__", "<unknown_command>")
-            self.logger.warning(
-                f"fatal fail - {command_name_} args={args}, kwargs={kwargs} - after {attempt}x retry"
-            )
+            self.logger.warning(f"fatal fail - {command_name_} args={args}, kwargs={kwargs} - after {attempt}x retry")
             raise _error from _error
         return result
 
     def find_one(
-            self,
-            collection: pymongo.collection.Collection,
-            where: Optional[types.BsonDict],
-            *args,
-            **kwargs,
+        self,
+        collection: pymongo.collection.Collection,
+        where: Optional[types.BsonDict],
+        *args,
+        **kwargs,
     ) -> Optional[types.BsonDict]:
         return self._retry_command(collection, collection.find_one, where, *args, **kwargs)
 
     def find(
-            self,
-            collection: pymongo.collection.Collection,
-            where: Optional[types.BsonDict],
-            *args,
-            **kwargs,
+        self,
+        collection: pymongo.collection.Collection,
+        where: Optional[types.BsonDict],
+        *args,
+        **kwargs,
     ) -> pymongo.cursor.Cursor[types.BsonDict]:
         return self._retry_command(collection, collection.find, where, *args, **kwargs)
 
     def find_one_and_update(
-            self,
-            collection: pymongo.collection.Collection,
-            where: types.BsonDict,
-            changes: types.BsonDict | types.BsonList,
-            *args,
-            **kwargs,
+        self,
+        collection: pymongo.collection.Collection,
+        where: types.BsonDict,
+        changes: types.BsonDict | types.BsonList,
+        *args,
+        **kwargs,
     ) -> Optional[types.BsonDict]:
         return self._retry_command(
             collection,
@@ -304,11 +295,11 @@ class Engine(types.Executor):
         )
 
     def aggregate(
-            self,
-            collection: pymongo.collection.Collection,
-            pipeline: types.BsonList,
-            *args,
-            **kwargs,
+        self,
+        collection: pymongo.collection.Collection,
+        pipeline: types.BsonList,
+        *args,
+        **kwargs,
     ) -> pymongo.command_cursor.CommandCursor:
         return self._retry_command(
             collection,
@@ -319,57 +310,57 @@ class Engine(types.Executor):
         )
 
     def update_one(
-            self,
-            collection: pymongo.collection.Collection,
-            where: Optional[types.BsonDict],
-            changes: types.BsonDict | Sequence[Mapping[str, Any]],
-            *args,
-            **kwargs,
+        self,
+        collection: pymongo.collection.Collection,
+        where: Optional[types.BsonDict],
+        changes: types.BsonDict | Sequence[Mapping[str, Any]],
+        *args,
+        **kwargs,
     ) -> pymongo.results.UpdateResult:
         return self._retry_command(collection, collection.update_one, where, changes, *args, **kwargs)
 
     def update_many(
-            self,
-            collection: pymongo.collection.Collection,
-            where: Optional[types.BsonDict],
-            changes: types.BsonDict | types.BsonList,
-            *args,
-            **kwargs,
+        self,
+        collection: pymongo.collection.Collection,
+        where: Optional[types.BsonDict],
+        changes: types.BsonDict | types.BsonList,
+        *args,
+        **kwargs,
     ) -> pymongo.results.UpdateResult:
         return self._retry_command(collection, collection.update_many, where, changes, *args, **kwargs)
 
     def insert_one(
-            self,
-            collection: pymongo.collection.Collection,
-            document: types.BsonDict,
-            *args,
-            **kwargs,
+        self,
+        collection: pymongo.collection.Collection,
+        document: types.BsonDict,
+        *args,
+        **kwargs,
     ) -> pymongo.results.InsertOneResult:
         return self._retry_command(collection, collection.insert_one, document, *args, **kwargs)
 
     def insert_many(
-            self,
-            collection: pymongo.collection.Collection,
-            documents: Iterable[types.BsonDict],
-            *args,
-            **kwargs,
+        self,
+        collection: pymongo.collection.Collection,
+        documents: Iterable[types.BsonDict],
+        *args,
+        **kwargs,
     ) -> pymongo.results.InsertManyResult:
         return self._retry_command(collection, collection.insert_many, documents, *args, **kwargs)
 
     def delete_one(
-            self,
-            collection: pymongo.collection.Collection,
-            where: Optional[types.BsonDict],
-            *args,
-            **kwargs,
+        self,
+        collection: pymongo.collection.Collection,
+        where: Optional[types.BsonDict],
+        *args,
+        **kwargs,
     ) -> pymongo.results.DeleteResult:
         return self._retry_command(collection, collection.delete_one, where, *args, **kwargs)
 
     def delete_many(
-            self,
-            collection: pymongo.collection.Collection,
-            where: Optional[types.BsonDict],
-            *args,
-            **kwargs,
+        self,
+        collection: pymongo.collection.Collection,
+        where: Optional[types.BsonDict],
+        *args,
+        **kwargs,
     ) -> pymongo.results.DeleteResult:
         return self._retry_command(collection, collection.delete_many, where, *args, **kwargs)
