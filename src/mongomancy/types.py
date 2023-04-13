@@ -38,7 +38,7 @@ BsonDict = Mapping[str, Bson]
 BsonList = Sequence[Bson]
 
 OrderedDictType = OrderedDict
-if sys.version_info >= 3.7:
+if sys.version_info >= (3, 7):
     OrderedDictType = TypeVar("OrderedDictType", bound=Dict)
 
 
