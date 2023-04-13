@@ -3,7 +3,7 @@ import datetime as dt
 import sys
 from dataclasses import dataclass, field
 from typing import (
-    OrderedDict,
+    OrderedDict as OrderedDictType,
     List,
     Tuple,
     Sequence,
@@ -14,9 +14,8 @@ from typing import (
     Any,
     Iterable,
     Callable,
-    TypeVar,
 )
-
+from collections import OrderedDict
 import pymongo.database
 import pymongo.results
 from bson import ObjectId
@@ -37,16 +36,18 @@ Bson = Union[None, int, float, bool, str, ObjectId, dt.datetime, Sequence["Bson"
 BsonDict = Mapping[str, Bson]
 BsonList = Sequence[Bson]
 
-OrderedDictType = OrderedDict
+OrderedFields = OrderedDictType[str, Union[str, int]]
 if sys.version_info >= (3, 7):
-    OrderedDictType = TypeVar("OrderedDictType", bound=Dict)
+    OrderedFields = Dict[str, Union[str, int]]
+
+OrderedPairs = Union[OrderedFields, Sequence[Tuple[str, Union[str, int]]]]
 
 
 @dataclass(init=False)
 class Index:
     """Collection Index data container"""
 
-    fields: OrderedDictType[str, Union[str, int]]
+    fields: OrderedDict[str, Union[str, int]]
     name: Optional[str]
     unique: Optional[bool]
 
@@ -58,11 +59,11 @@ class Index:
 
     def __init__(
         self,
-        fields: OrderedDictType[str, Union[str, int]],
+        fields: OrderedPairs,
         name: Optional[str] = None,
         unique: Optional[bool] = False,
     ) -> None:
-        self.fields = fields
+        self.fields = OrderedDict(fields)
         self.name = name
         self.unique = unique
 

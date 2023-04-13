@@ -8,6 +8,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+## [0.0.6] - 2023-04-13
+
+### Fixed
+
+- typing of required fields of index more broad
+
 ## [0.0.5] - 2023-04-12
 
 ### Added

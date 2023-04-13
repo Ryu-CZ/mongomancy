@@ -2,7 +2,17 @@ import logging
 import time
 import traceback
 from dataclasses import dataclass
-from typing import List, Tuple, Union, TypeVar, Mapping, Any, Optional, Dict, Iterable
+from typing import (
+    List,
+    Tuple,
+    Union,
+    TypeVar,
+    Mapping,
+    Any,
+    Optional,
+    Dict,
+    Iterable,
+)
 
 import pymongo
 import pymongo.command_cursor
