@@ -18,6 +18,7 @@ from typing import (
 from collections import OrderedDict
 import pymongo.database
 import pymongo.results
+import pymongo.client_session
 from bson import ObjectId
 from pymongo.command_cursor import CommandCursor
 
@@ -115,6 +116,15 @@ class Executor(metaclass=abc.ABCMeta):
     """
 
     __slots__ = ()
+
+    @abc.abstractmethod
+    def start_session(
+        self,
+        causal_consistency: Optional[bool] = None,
+        default_transaction_options: Optional[pymongo.client_session.TransactionOptions] = None,
+        snapshot: Optional[bool] = False,
+    ) -> pymongo.client_session.ClientSession:
+        ...
 
     @abc.abstractmethod
     def find_one(

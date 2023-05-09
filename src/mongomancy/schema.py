@@ -1,4 +1,6 @@
 import logging
+import multiprocessing
+import threading
 import time
 import traceback
 from dataclasses import dataclass
@@ -12,6 +14,7 @@ from typing import (
     Optional,
     Dict,
     Iterable,
+    ClassVar,
 )
 
 import pymongo
@@ -33,6 +36,15 @@ __all__ = (
 
 LoggerType = Union[logging.Logger, logging.LoggerAdapter]
 DocumentType = TypeVar("DocumentType", bound=Mapping[str, Any])
+
+
+def define_lock_collection(name: str):
+    return types.CollectionDefinition(
+        name,
+        default_docs=[
+            types.Document(unique_key={"_id": "master"}, data={"_id": "master", "locked": False}),
+        ],
+    )
 
 
 @dataclass(slots=True)
@@ -154,13 +166,18 @@ class Database:
     topology: List[types.CollectionDefinition]
     _database: pymongo.database.Database
     _collections: Dict[str, Collection]
+    mp_semaphore: multiprocessing.Semaphore
+    th_semaphore: threading.Semaphore
     logger: LoggerType
+    LOCK_COLLECTION: ClassVar[str] = "mongomancy_lock"
 
     __slots__ = (
         "engine",
         "topology",
         "_database",
         "_collections",
+        "mp_semaphore",
+        "th_semaphore",
         "logger",
     )
 
@@ -171,6 +188,8 @@ class Database:
         engine: types.Executor,
         *collections: types.CollectionDefinition,
     ) -> None:
+        self.mp_semaphore = multiprocessing.Semaphore()
+        self.th_semaphore = threading.Semaphore()
         self._collections = {}
         self.topology = []
         self.logger = logger
@@ -232,14 +251,43 @@ class Database:
         """
         self.topology.append(new_definitions)
 
+    def _lock(self) -> bool:
+        self.create_collection(define_lock_collection(self.LOCK_COLLECTION))
+        doc = self.engine.find_one_and_update(
+            self._database[self.LOCK_COLLECTION],
+            where={"_id": "master", "locked": False},
+            changes={"$set": {"locked": True}},
+        )
+        if not doc:
+            return False
+        return not bool(doc.get("locked"))
+
+    def _unlock(self):
+        self.engine.find_one_and_update(
+            self._database[self.LOCK_COLLECTION],
+            where={"_id": "master"},
+            changes={"$set": {"locked": False}},
+            upsert=True,
+        )
+
     def create_all(self, skip_existing: bool = True) -> None:
         """
         Create all collections if not exists. Loads `self._collections` for use.
 
         :param skip_existing: skip collection init if collection already exists in db
         """
-        for collection_definition in self.topology:
-            _ = self.create_collection(collection_definition, skip_existing)
+        with self.mp_semaphore:
+            with self.th_semaphore:
+                if not self._lock():
+                    self.logger.debug("database is locked - this process or thread is skipping 'Database.create_all'")
+                    return
+                try:
+                    for collection_definition in self.topology:
+                        _ = self.create_collection(collection_definition, skip_existing)
+                except (Exception, KeyError, IndexError, IOError) as e:
+                    self.logger.error(f"create_all failed on {e}")
+                    self._unlock()
+                    raise e from e
 
     def create_collection(
         self,

@@ -8,6 +8,13 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+## [0.1.0] - 2023-05-09
+
+### Added
+
+- mongomancy creates `mongomancy_lock` collection to synchronize db init with master lock record
+- create all now uses multiprocess and thread log
+
 ## [0.0.6] - 2023-04-13
 
 ### Fixed

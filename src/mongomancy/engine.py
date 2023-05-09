@@ -9,6 +9,7 @@ import pymongo.command_cursor
 import pymongo.database
 import pymongo.results
 import pymongo.typings
+import pymongo.client_session
 from pymongo.errors import PyMongoError
 
 from . import mongo_errors, types
@@ -54,6 +55,8 @@ class Engine(types.Executor):
         "_address",
         "_connection_params",
         "reconnect_hooks",
+        "mp_semaphore",
+        "th_semaphore",
     )
 
     def __init__(
@@ -258,6 +261,18 @@ class Engine(types.Executor):
             self.logger.warning(f"fatal fail - {command_name_} args={args}, kwargs={kwargs} - after {attempt}x retry")
             raise _error from _error
         return result
+
+    def start_session(
+        self,
+        causal_consistency: Optional[bool] = None,
+        default_transaction_options: Optional[pymongo.client_session.TransactionOptions] = None,
+        snapshot: Optional[bool] = False,
+    ) -> pymongo.client_session.ClientSession:
+        return self.client.start_session(
+            causal_consistency,
+            default_transaction_options,
+            snapshot,
+        )
 
     def find_one(
         self,
