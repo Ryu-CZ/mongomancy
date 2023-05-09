@@ -271,19 +271,23 @@ class Database:
             changes={"$set": {"locked": True}},
         )
         if not doc:
+            # failed to acquire
             return False
+        # doc is return in "before update" state
+        self.logger.debug(f"master lock state before lock update: {doc}")
         return not bool(doc.get("locked"))
 
     def _unlock(self):
         """
         Update master lock to unlock state.
         """
-        self.engine.find_one_and_update(
+        doc = self.engine.find_one_and_update(
             self._database[self.LOCK_COLLECTION],
             where={"_id": "master"},
             changes={"$set": {"locked": False}},
             upsert=True,
         )
+        self.logger.debug(f"master lock state before unlock update: {doc}")
 
     def create_all(self, skip_existing: bool = True) -> None:
         """
@@ -364,8 +368,9 @@ class Database:
         try:
             new_collection = self._database.create_collection(definition.name)
             self.logger.info(f"{self.name} - created collection {definition.name!r}")
-        except pymongo.errors.CollectionInvalid:
+        except (pymongo.errors.CollectionInvalid, pymongo.errors.OperationFailure) as e:
             self.logger.info(f"{self.name} - (probable race condition) skipped collection create {definition.name!r}")
+            self.logger.debug(f"collection {definition.name!r} init failed on {e!r}")
             time.sleep(0.5)
             new_collection = self._database[definition.name]
         return new_collection, True
