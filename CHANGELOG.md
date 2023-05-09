@@ -8,6 +8,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+## [0.1.4] - 2023-05-09
+
+### Fixed
+
+- tracing if engine dispose to prevent closed connection error
+
 ## [0.1.3] - 2023-05-09
 
 ### Fixed

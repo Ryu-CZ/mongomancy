@@ -27,11 +27,11 @@ class Engine(types.Executor):
     Client of Mongo Database storage. All DB communication should be handled through this class.
     """
 
-    CONNECTION_ERRORS: ClassVar[Type[pymongo.errors.PyMongoError]] = (
+    CONNECTION_ERRORS: ClassVar[Type[pymongo.errors.PyMongoError]] = [
         pymongo.errors.AutoReconnect,
         pymongo.errors.ConnectionFailure,
-    )
-
+    ]
+    disposed: bool
     client: pymongo.MongoClient
     logger: LoggerType
     retry_codes: Set[int]
@@ -57,6 +57,7 @@ class Engine(types.Executor):
         "reconnect_hooks",
         "mp_semaphore",
         "th_semaphore",
+        "disposed",
     )
 
     def __init__(
@@ -96,6 +97,7 @@ class Engine(types.Executor):
         :exception pymongo.errors.PyMongoError: if database connection could not be established
         """
         super(Engine, self).__init__()
+        self.disposed = True
         self.reconnect_hooks = []
         self._address = f"{host}:{port}"
         self.logger = logger or logging.getLogger(type(self).__qualname__)
@@ -123,6 +125,7 @@ class Engine(types.Executor):
             **kwargs,
         )
         self.client = self._new_client()
+        self.disposed = False
         atexit.register(self.dispose)
 
     def __repr__(self) -> str:
@@ -169,6 +172,7 @@ class Engine(types.Executor):
         """
         try:
             self.client.close()
+            self.disposed = True
         except PyMongoError as e:
             self.logger.debug(f"Cannot close mongo client because: {e}")
         self.logger.debug(f"{self} - disconnect from MongoDB")
@@ -202,6 +206,7 @@ class Engine(types.Executor):
         self.logger.debug(f"{type(self).__qualname__} - reconnecting client")
         try:
             self.client = self._new_client()
+            self.disposed = False
         except (IOError, pymongo.errors.PyMongoError) as e:
             self.logger.error(f"{type(self).__qualname__} - cannot reconnect to mongo server because: {e}")
         for hook in self.reconnect_hooks:
@@ -227,6 +232,8 @@ class Engine(types.Executor):
         :param kwargs: key word arguments for command
         :return: return same as command returns
         """
+        if self.disposed:
+            self.reconnect()
         result = None
         _error = False
         attempt = 0
@@ -235,7 +242,7 @@ class Engine(types.Executor):
             try:
                 result = command(*args, **kwargs)
                 _error = None
-            except pymongo.errors.AutoReconnect as e:
+            except self.CONNECTION_ERRORS as e:
                 command_name_ = command_name_ or getattr(command, "__qualname__", "<unknown_command>")
                 self.logger.info(
                     f"fail {attempt}/{self.write_retry} - {command_name_} " f"args={args}, kwargs={kwargs} e={e}"
