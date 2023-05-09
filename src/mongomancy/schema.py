@@ -170,6 +170,8 @@ class Database:
     th_semaphore: threading.Semaphore
     logger: LoggerType
     LOCK_COLLECTION: ClassVar[str] = "mongomancy_lock"
+    wait_step: float
+    max_wait: float
 
     __slots__ = (
         "engine",
@@ -179,6 +181,8 @@ class Database:
         "mp_semaphore",
         "th_semaphore",
         "logger",
+        "wait_step",
+        "max_wait",
     )
 
     def __init__(
@@ -187,7 +191,11 @@ class Database:
         logger: LoggerType,
         engine: types.Executor,
         *collections: types.CollectionDefinition,
+        wait_step: float = 7,
+        max_wait: float = 90,
     ) -> None:
+        self.max_wait = max_wait
+        self.wait_step = wait_step
         self.mp_semaphore = multiprocessing.Semaphore()
         self.th_semaphore = threading.Semaphore()
         self._collections = {}
@@ -252,6 +260,10 @@ class Database:
         self.topology.append(new_definitions)
 
     def _lock(self) -> bool:
+        """
+        Try to acquire lock or return false
+        :returns: lock acquired
+        """
         self.create_collection(define_lock_collection(self.LOCK_COLLECTION))
         doc = self.engine.find_one_and_update(
             self._database[self.LOCK_COLLECTION],
@@ -263,8 +275,11 @@ class Database:
         return not bool(doc.get("locked"))
 
     def _unlock(self):
+        """
+        Update master lock to unlock state.
+        """
         self.engine.find_one_and_update(
-            self._database[self.LOCK_COLLECTION],
+            self._database.client.c[self.LOCK_COLLECTION],
             where={"_id": "master"},
             changes={"$set": {"locked": False}},
             upsert=True,
@@ -278,9 +293,15 @@ class Database:
         """
         with self.mp_semaphore:
             with self.th_semaphore:
-                if not self._lock():
-                    self.logger.debug("database is locked - this process or thread is skipping 'Database.create_all'")
-                    return
+                wait_time = 0
+                while not self._lock():
+                    self.logger.debug(f"create_all - process or thread is waiting for master lock {wait_time}sec")
+                    time.sleep(self.wait_step)
+                    wait_time += self.wait_step
+                    if wait_time > self.max_wait:
+                        self.logger.warning(f"create_all - wait timeout after {wait_time}sec and stops waiting")
+                        self._unlock()
+                        break
                 try:
                     for collection_definition in self.topology:
                         _ = self.create_collection(collection_definition, skip_existing)
@@ -288,6 +309,7 @@ class Database:
                     self.logger.error(f"create_all failed on {e}")
                     self._unlock()
                     raise e from e
+                self._unlock()
 
     def create_collection(
         self,
