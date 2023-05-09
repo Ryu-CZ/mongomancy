@@ -279,7 +279,7 @@ class Database:
         Update master lock to unlock state.
         """
         self.engine.find_one_and_update(
-            self._database.client.c[self.LOCK_COLLECTION],
+            self._database[self.LOCK_COLLECTION],
             where={"_id": "master"},
             changes={"$set": {"locked": False}},
             upsert=True,
