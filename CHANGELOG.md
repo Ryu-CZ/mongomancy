@@ -8,6 +8,13 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+## [0.1.7] - 2023-05-10
+
+### Fix
+
+- lock critical sections `Engine.reconnect`, `Engine.dispose` to prevent unexpected connections states
+- lock `Database.create_all` method to prevent double init at same
+
 ## [0.1.6] - 2023-05-10
 
 ### Fix

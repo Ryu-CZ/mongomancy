@@ -1,6 +1,9 @@
 import abc
 import datetime as dt
+import logging
+import multiprocessing
 import sys
+import threading
 import typing
 from collections import OrderedDict
 from dataclasses import dataclass, field
@@ -34,6 +37,7 @@ __all__ = (
     "CollectionContainer",
     "Executor",
     "CommandCursor",
+    "SemaphoreTower",
 )
 
 Bson = Union[None, int, float, bool, str, ObjectId, dt.datetime, Sequence["Bson"], Mapping[str, "Bson"]]
@@ -45,11 +49,6 @@ if sys.version_info >= (3, 7):
     OrderedFields = Dict[str, Union[str, int]]
 
 OrderedPairs = Union[OrderedFields, Sequence[Tuple[str, Union[str, int]]]]
-
-
-class CollectionContainer(typing.Protocol):
-    dialect_entity: pymongo.collection.Collection
-
 
 METHOD = typing.Literal[
     "find",
@@ -63,6 +62,57 @@ METHOD = typing.Literal[
     "delete_many",
     "aggregate",
 ]
+
+
+class CollectionContainer(typing.Protocol):
+    dialect_entity: pymongo.collection.Collection
+
+
+class SemaphoreTower:
+    __slots__ = (
+        "multiprocess",
+        "thread",
+        "timeout",
+        "logger",
+    )
+    multiprocess: multiprocessing.Semaphore
+    thread: threading.Semaphore
+    timeout: Optional[float]
+    logger: Optional[logging.Logger]
+
+    def __init__(
+        self,
+        value: int = 1,
+        timeout: Optional[float] = None,
+        logger: Optional[logging.Logger] = None,
+    ) -> None:
+        """
+        Helper to make multiple semaphores work as one critical section
+
+        :param value: semaphore init value
+        :param timeout: timeout is used for EACH semaphore in cascade, so result timeout is 2xtimeout
+        :param logger: give me info about what happens here
+        """
+        value = min(value or 1, 1)
+        self.logger = logger
+        self.timeout = timeout
+        self.multiprocess = multiprocessing.Semaphore(value)
+        self.thread = threading.Semaphore(value)
+
+    def __enter__(self):
+        if self.logger:
+            self.logger.debug("waiting for semaphore tower")
+        self.multiprocess.acquire(timeout=self.timeout)
+        self.thread.acquire(timeout=self.timeout)
+        if self.logger:
+            self.logger.debug("entering semaphore tower context")
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.thread.release()
+        self.multiprocess.release()
+        if self.logger:
+            self.logger.debug("released semaphore tower context")
 
 
 @dataclass(init=False)

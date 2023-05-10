@@ -1,6 +1,4 @@
 import logging
-import multiprocessing
-import threading
 import time
 import traceback
 from dataclasses import dataclass
@@ -178,8 +176,7 @@ class Database:
     topology: List[types.CollectionDefinition]
     _database: pymongo.database.Database
     _collections: Dict[str, Collection]
-    mp_semaphore: multiprocessing.Semaphore
-    th_semaphore: threading.Semaphore
+    semaphore_tower: types.SemaphoreTower
     logger: LoggerType
     LOCK_COLLECTION: ClassVar[str] = "mongomancy_lock"
     wait_step: float
@@ -190,8 +187,7 @@ class Database:
         "topology",
         "_database",
         "_collections",
-        "mp_semaphore",
-        "th_semaphore",
+        "semaphore_tower",
         "logger",
         "wait_step",
         "max_wait",
@@ -208,11 +204,10 @@ class Database:
     ) -> None:
         self.max_wait = max_wait
         self.wait_step = wait_step
-        self.mp_semaphore = multiprocessing.Semaphore()
-        self.th_semaphore = threading.Semaphore()
         self._collections = {}
         self.topology = []
         self.logger = logger
+        self.semaphore_tower = types.SemaphoreTower(logger=self.logger)
         self.engine = engine
         self._database = engine.get_database(name)
         for coll in collections:
@@ -311,25 +306,24 @@ class Database:
 
         :param skip_existing: skip collection init if collection already exists in db
         """
-        with self.mp_semaphore:
-            with self.th_semaphore:
-                wait_time = 0
-                while not self._lock():
-                    self.logger.debug(f"create_all - process or thread is waiting for master lock {wait_time}sec")
-                    time.sleep(self.wait_step)
-                    wait_time += self.wait_step
-                    if wait_time > self.max_wait:
-                        self.logger.warning(f"create_all - wait timeout after {wait_time}sec and stops waiting")
-                        self._unlock()
-                        break
-                try:
-                    for collection_definition in self.topology:
-                        _ = self.create_collection(collection_definition, skip_existing)
-                except (Exception, KeyError, IndexError, IOError) as e:
-                    self.logger.error(f"create_all failed on {e}")
+        with self.semaphore_tower:
+            wait_time = 0
+            while not self._lock():
+                self.logger.debug(f"create_all - process or thread is waiting for master lock {wait_time}sec")
+                time.sleep(self.wait_step)
+                wait_time += self.wait_step
+                if wait_time > self.max_wait:
+                    self.logger.warning(f"create_all - wait timeout after {wait_time}sec and stops waiting")
                     self._unlock()
-                    raise e from e
+                    break
+            try:
+                for collection_definition in self.topology:
+                    _ = self.create_collection(collection_definition, skip_existing)
+            except (Exception, KeyError, IndexError, IOError) as e:
+                self.logger.error(f"create_all failed on {e}")
                 self._unlock()
+                raise e from e
+            self._unlock()
 
     def create_collection(
         self,

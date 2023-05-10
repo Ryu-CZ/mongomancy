@@ -34,6 +34,7 @@ class Engine(types.Executor):
     disposed: bool
     client: pymongo.MongoClient
     logger: LoggerType
+    semaphore_tower: types.SemaphoreTower
     retry_codes: Set[int]
     write_retry: int
     write_retry_delay: Union[float, int]
@@ -55,8 +56,7 @@ class Engine(types.Executor):
         "_address",
         "_connection_params",
         "reconnect_hooks",
-        "mp_semaphore",
-        "th_semaphore",
+        "semaphore_tower",
         "disposed",
     )
 
@@ -101,6 +101,7 @@ class Engine(types.Executor):
         self.reconnect_hooks = []
         self._address = f"{host}:{port}"
         self.logger = logger or logging.getLogger(type(self).__qualname__)
+        self.semaphore_tower = types.SemaphoreTower(logger=self.logger)
         self.retry_codes = set(retry_codes or mongo_errors.DEFAULT_RETRY)
         # how many times to retry write on error 10107 (switched master)
         self.write_retry = max(0, write_retry or 0)
@@ -124,9 +125,10 @@ class Engine(types.Executor):
             **authentication,
             **kwargs,
         )
-        self.client = self._new_client()
-        self.disposed = False
-        atexit.register(self.dispose)
+        with self.semaphore_tower:
+            self.client = self._new_client()
+            self.disposed = False
+            atexit.register(self.dispose)
 
     def __repr__(self) -> str:
         return f"{type(self).__qualname__}(server={self.address!r})"
@@ -168,8 +170,19 @@ class Engine(types.Executor):
 
     def dispose(self) -> None:
         """
+        Cleanup client resources and disconnect from MongoDB. Thread locked and fork locked.
+        """
+        if self.disposed:
+            return
+        with self.semaphore_tower:
+            return self._dispose()
+
+    def _dispose(self) -> None:
+        """
         Cleanup client resources and disconnect from MongoDB.
         """
+        if self.disposed:
+            return
         try:
             self.client.close()
             self.disposed = True
@@ -201,7 +214,12 @@ class Engine(types.Executor):
                 self.logger.warning(traceback.format_stack())
         return bool(is_ok)
 
-    def reconnect(self):
+    def reconnect(self) -> None:
+        """Close existing MongoClient and create new one. Thread locked and fork locked."""
+        with self.semaphore_tower:
+            return self._reconnect()
+
+    def _reconnect(self) -> None:
         """Close existing MongoClient and create new one"""
         self.logger.debug(f"{type(self).__qualname__} - reconnecting client")
         try:
