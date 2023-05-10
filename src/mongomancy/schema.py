@@ -69,6 +69,10 @@ class Collection:
     def name(self) -> str:
         return self.pymongo_collection.name
 
+    @property
+    def full_name(self) -> str:
+        return self.pymongo_collection.full_name
+
     def find_one(
         self,
         where: Optional[types.BsonDict],
@@ -448,7 +452,7 @@ class Database:
         :return: docs created
         """
         new_docs_cnt = 0
-        coll_name = collection.mongo_collection.full_name
+        coll_name = collection.full_name
         for doc in docs:
             if not collection.find_one(doc.unique_key, {"_id": 1}):
                 self.logger.debug(f"{coll_name} - inserting default {doc!r}")
