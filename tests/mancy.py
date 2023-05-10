@@ -1,9 +1,14 @@
 import logging
+import sys
+
 from src.mongomancy import Engine, Database, CollectionDefinition, Index
 
 engine = Engine("localhost", 27017)
-logger = logging.getLogger(__name__)
-logger.level = logging.DEBUG
+logging.basicConfig(
+    level=logging.DEBUG,
+    handlers=[logging.StreamHandler(stream=sys.stdout)],
+)
+logger = logging.getLogger()
 db = Database("gaming", engine=engine, logger=logger)
 game = CollectionDefinition(name="game", indices=[Index(fields={"genre": 1})])
 player = CollectionDefinition(name="player", indices=[Index(fields={"player_id": 1}, unique=True)])
