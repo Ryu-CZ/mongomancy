@@ -1,6 +1,8 @@
 import abc
 import datetime as dt
 import sys
+import typing
+from collections import OrderedDict
 from dataclasses import dataclass, field
 from typing import (
     OrderedDict as OrderedDictType,
@@ -15,10 +17,10 @@ from typing import (
     Iterable,
     Callable,
 )
-from collections import OrderedDict
+
+import pymongo.client_session
 import pymongo.database
 import pymongo.results
-import pymongo.client_session
 from bson import ObjectId
 from pymongo.command_cursor import CommandCursor
 
@@ -29,6 +31,7 @@ __all__ = (
     "Index",
     "Document",
     "CollectionDefinition",
+    "CollectionContainer",
     "Executor",
     "CommandCursor",
 )
@@ -42,6 +45,24 @@ if sys.version_info >= (3, 7):
     OrderedFields = Dict[str, Union[str, int]]
 
 OrderedPairs = Union[OrderedFields, Sequence[Tuple[str, Union[str, int]]]]
+
+
+class CollectionContainer(typing.Protocol):
+    dialect_entity: pymongo.collection.Collection
+
+
+METHOD = typing.Literal[
+    "find",
+    "find_one",
+    "find_one_and_update",
+    "update_one",
+    "update_many",
+    "insert_one",
+    "insert_many",
+    "delete_one",
+    "delete_many",
+    "aggregate",
+]
 
 
 @dataclass(init=False)
@@ -129,7 +150,7 @@ class Executor(metaclass=abc.ABCMeta):
     @abc.abstractmethod
     def find_one(
         self,
-        collection: pymongo.collection.Collection,
+        collection: CollectionContainer,
         where: Optional[BsonDict],
         *args,
         **kwargs,
@@ -139,7 +160,7 @@ class Executor(metaclass=abc.ABCMeta):
     @abc.abstractmethod
     def find(
         self,
-        collection: pymongo.collection.Collection,
+        collection: CollectionContainer,
         where: Optional[BsonDict],
         *args,
         **kwargs,
@@ -149,7 +170,7 @@ class Executor(metaclass=abc.ABCMeta):
     @abc.abstractmethod
     def find_one_and_update(
         self,
-        collection: pymongo.collection.Collection,
+        collection: CollectionContainer,
         where: BsonDict,
         changes: BsonDict | BsonList,
         *args,
@@ -160,7 +181,7 @@ class Executor(metaclass=abc.ABCMeta):
     @abc.abstractmethod
     def update_one(
         self,
-        collection: pymongo.collection.Collection,
+        collection: CollectionContainer,
         where: Optional[BsonDict],
         changes: BsonDict | BsonList,
         *args,
@@ -171,7 +192,7 @@ class Executor(metaclass=abc.ABCMeta):
     @abc.abstractmethod
     def update_many(
         self,
-        collection: pymongo.collection.Collection,
+        collection: CollectionContainer,
         where: Optional[BsonDict],
         changes: BsonDict | BsonList,
         *args,
@@ -182,7 +203,7 @@ class Executor(metaclass=abc.ABCMeta):
     @abc.abstractmethod
     def insert_one(
         self,
-        collection: pymongo.collection.Collection,
+        collection: CollectionContainer,
         document: Optional[BsonDict],
         *args,
         **kwargs,
@@ -192,7 +213,7 @@ class Executor(metaclass=abc.ABCMeta):
     @abc.abstractmethod
     def insert_many(
         self,
-        collection: pymongo.collection.Collection,
+        collection: CollectionContainer,
         documents: Iterable[BsonDict],
         *args,
         **kwargs,
@@ -202,7 +223,7 @@ class Executor(metaclass=abc.ABCMeta):
     @abc.abstractmethod
     def delete_one(
         self,
-        collection: pymongo.collection.Collection,
+        collection: CollectionContainer,
         where: Optional[BsonDict],
         *args,
         **kwargs,
@@ -212,7 +233,7 @@ class Executor(metaclass=abc.ABCMeta):
     @abc.abstractmethod
     def delete_many(
         self,
-        collection: pymongo.collection.Collection,
+        collection: CollectionContainer,
         where: Optional[BsonDict],
         *args,
         **kwargs,
@@ -222,7 +243,7 @@ class Executor(metaclass=abc.ABCMeta):
     @abc.abstractmethod
     def aggregate(
         self,
-        collection: pymongo.collection.Collection,
+        collection: CollectionContainer,
         pipeline: BsonList,
         *args,
         **kwargs,

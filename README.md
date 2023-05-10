@@ -39,7 +39,7 @@ internal state of database's collections instances.
         }
     
         class Collection{
-            +mongo_collection: pymongo.collection.Collection
+            +dialect_entity: pymongo.collection.Collection
             +engine: Executor
             +find_one(...)
             other_collection_methods()

@@ -54,12 +54,20 @@ class Collection:
     Wraps `pymongo.collection.Collection` for easier reconnect.
     """
 
-    mongo_collection: pymongo.collection.Collection
+    dialect_entity: pymongo.collection.Collection
     engine: types.Executor
 
     @property
+    def pymongo_collection(self) -> pymongo.collection.Collection:
+        return self.dialect_entity
+
+    @pymongo_collection.setter
+    def pymongo_collection(self, value: pymongo.collection.Collection) -> None:
+        self.dialect_entity = value
+
+    @property
     def name(self) -> str:
-        return self.mongo_collection.name
+        return self.pymongo_collection.name
 
     def find_one(
         self,
@@ -67,7 +75,7 @@ class Collection:
         *args,
         **kwargs,
     ) -> Optional[DocumentType]:
-        return self.engine.find_one(self.mongo_collection, where, *args, **kwargs)
+        return self.engine.find_one(self, where, *args, **kwargs)
 
     def find(
         self,
@@ -75,7 +83,7 @@ class Collection:
         *args,
         **kwargs,
     ) -> pymongo.cursor.Cursor[types.BsonDict]:
-        return self.engine.find(self.mongo_collection, where, *args, **kwargs)
+        return self.engine.find(self, where, *args, **kwargs)
 
     def find_one_and_update(
         self,
@@ -84,7 +92,7 @@ class Collection:
         *args,
         **kwargs,
     ) -> Optional[types.BsonDict]:
-        return self.engine.find_one_and_update(self.mongo_collection, where, changes, *args, **kwargs)
+        return self.engine.find_one_and_update(self, where, changes, *args, **kwargs)
 
     def update_one(
         self,
@@ -93,7 +101,7 @@ class Collection:
         *args,
         **kwargs,
     ) -> pymongo.results.UpdateResult:
-        return self.engine.update_one(self.mongo_collection, where, changes, *args, **kwargs)
+        return self.engine.update_one(self, where, changes, *args, **kwargs)
 
     def update_many(
         self,
@@ -102,7 +110,7 @@ class Collection:
         *args,
         **kwargs,
     ) -> pymongo.results.UpdateResult:
-        return self.engine.update_many(self.mongo_collection, where, changes, *args, **kwargs)
+        return self.engine.update_many(self, where, changes, *args, **kwargs)
 
     def insert_one(
         self,
@@ -110,7 +118,7 @@ class Collection:
         *args,
         **kwargs,
     ) -> pymongo.results.InsertOneResult:
-        return self.engine.insert_one(self.mongo_collection, document, *args, **kwargs)
+        return self.engine.insert_one(self, document, *args, **kwargs)
 
     def insert_many(
         self,
@@ -118,7 +126,7 @@ class Collection:
         *args,
         **kwargs,
     ) -> pymongo.results.InsertManyResult:
-        return self.engine.insert_many(self.mongo_collection, documents, *args, **kwargs)
+        return self.engine.insert_many(self, documents, *args, **kwargs)
 
     def delete_one(
         self,
@@ -126,7 +134,7 @@ class Collection:
         *args,
         **kwargs,
     ) -> pymongo.results.DeleteResult:
-        return self.engine.delete_one(self.mongo_collection, where, *args, **kwargs)
+        return self.engine.delete_one(self, where, *args, **kwargs)
 
     def delete_many(
         self,
@@ -134,7 +142,7 @@ class Collection:
         *args,
         **kwargs,
     ) -> pymongo.results.DeleteResult:
-        return self.engine.delete_many(self.mongo_collection, where, *args, **kwargs)
+        return self.engine.delete_many(self, where, *args, **kwargs)
 
     def aggregate(
         self,
@@ -142,7 +150,7 @@ class Collection:
         *args,
         **kwargs,
     ) -> pymongo.command_cursor.CommandCursor:
-        return self.engine.aggregate(self.mongo_collection, pipeline, *args, **kwargs)
+        return self.engine.aggregate(self, pipeline, *args, **kwargs)
 
 
 class Database:
@@ -231,12 +239,12 @@ class Database:
         """
         Hook for handling reconnect event.
         Changes internal reference to pymongo database `self._database` together with
-        contained `mongo_collection` of each `self._collections`.
+        contained `dialect_entity` of each `self._collections`.
         """
         self._database = source.get_database(self.name)
         self.logger.debug(f"{self}.invalidate_cache_hook - switched _database")
         for collection in self._collections.values():
-            collection.mongo_collection = self._database[collection.name]
+            collection.dialect_entity = self._database[collection.name]
         self.logger.debug(f"{self}.invalidate_cache_hook - switch _collections bindings")
 
     def get_collection(self, name: str) -> Collection:
@@ -264,9 +272,9 @@ class Database:
         Try to acquire lock or return false
         :returns: lock acquired
         """
-        self.create_collection(define_lock_collection(self.LOCK_COLLECTION))
+        lock_collection = self.create_collection(define_lock_collection(self.LOCK_COLLECTION))
         doc = self.engine.find_one_and_update(
-            self._database[self.LOCK_COLLECTION],
+            lock_collection,
             where={"_id": "master", "locked": False},
             changes={"$set": {"locked": True}},
         )
@@ -281,8 +289,12 @@ class Database:
         """
         Update master lock to unlock state.
         """
+        lock_collection = Collection(
+            dialect_entity=self._database[self.LOCK_COLLECTION],
+            engine=self.engine,
+        )
         doc = self.engine.find_one_and_update(
-            self._database[self.LOCK_COLLECTION],
+            lock_collection,
             where={"_id": "master"},
             changes={"$set": {"locked": False}},
             upsert=True,
@@ -332,7 +344,7 @@ class Database:
             return self._collections[definition.name]
         mongo_collection, is_new = self._create_mongo_collection(definition)
         new_collection = Collection(
-            mongo_collection=mongo_collection,
+            dialect_entity=mongo_collection,
             engine=self.engine,
         )
         if is_new or not skip_existing:

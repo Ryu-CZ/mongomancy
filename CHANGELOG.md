@@ -8,6 +8,13 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+## [0.1.5] - 2023-05-09
+
+### Fixed
+
+- reset references correctly after dispose
+- query repeat on fail - queries are now actually repeated on new collection instance instead of disconnected one
+
 ## [0.1.4] - 2023-05-09
 
 ### Fixed
