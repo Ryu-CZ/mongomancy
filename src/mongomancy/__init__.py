@@ -1,7 +1,7 @@
 """
 Abstraction layer of PyMongo with auto-reconnect and collection initialization support.
 """
-__version__ = "0.1.7"
+__version__ = "0.1.8"
 
 # pymongo shortcuts
 import pymongo

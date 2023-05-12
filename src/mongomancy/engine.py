@@ -30,6 +30,7 @@ class Engine(types.Executor):
     CONNECTION_ERRORS: ClassVar[Iterable[Type[pymongo.errors.PyMongoError]]] = (
         pymongo.errors.AutoReconnect,
         pymongo.errors.ConnectionFailure,
+        IOError,
     )
     disposed: bool
     client: pymongo.MongoClient
@@ -197,15 +198,22 @@ class Engine(types.Executor):
         :param database: database name, otherwise just ping client by listing databases
         :return: Is database server reachable?
         """
+
         is_ok = False
-        retry = self.read_retry
+        retry = max(1, self.read_retry)
         while not is_ok and retry > 0:
+            retry -= 1
+            if self.disposed:
+                try:
+                    self.reconnect()
+                except PyMongoError:
+                    is_ok = False
             try:
                 _ = self.client.list_databases()
                 is_ok = True
                 if database:
                     is_ok = self.client.get_database(database).command("ping").get("ok")
-            except (IOError, pymongo.errors.ConnectionFailure) as e:
+            except self.CONNECTION_ERRORS as e:
                 self.logger.info(f"failed to ping database={database!r} - e={e}")
                 time.sleep(self.read_retry_delay)
                 self.reconnect()

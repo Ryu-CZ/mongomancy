@@ -9,11 +9,17 @@ logging.basicConfig(
     handlers=[logging.StreamHandler(stream=sys.stdout)],
 )
 logger = logging.getLogger()
+
+print(f"ping after start = {engine.ping()}")
+engine.dispose()
+print(f"ping after dispose = {engine.ping()}")
+
 db = Database("gaming", engine=engine, logger=logger)
 game = CollectionDefinition(name="game", indices=[Index(fields={"genre": 1})])
 player = CollectionDefinition(name="player", indices=[Index(fields={"player_id": 1}, unique=True)])
 db.add_collection(game)
 db.add_collection(player)
+
 db.create_all()
 docs = list(db["game"].find({"genre": "adventure"}))
 print(f"adventure games: {docs}")
