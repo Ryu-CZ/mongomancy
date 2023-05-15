@@ -100,3 +100,36 @@ db.add_collection(player)
 db.create_all()
 db["game"].find({"genre": "adventure"})
 ```
+## Build
+
+Clone repo and set up your pypi repo account credentials on build for build environment.
+
+- Move to package repo:
+
+    ```shell
+    cd ~/git/mongomancy
+    ```
+
+- Install requirements:
+
+   ```shell
+   python -m pip install -Ur requirements.txt
+   ```
+
+- Clean old build fragments:
+
+    ```shell
+    rm -rf ./dist ./build ./mongomancy/mongomancy.egg-info
+    ```
+
+- Build new package:
+
+    ```shell
+    python -m build
+    ``` 
+
+- Upload new package:
+
+    ```shell
+    python -m twine upload dist/* 
+    ```
