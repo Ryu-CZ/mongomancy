@@ -2,7 +2,21 @@ import atexit
 import logging
 import time
 import traceback
-from typing import List, Sequence, Union, Set, TypeVar, Mapping, Any, ClassVar, Type, Optional, Callable, Iterable
+from typing import (
+    List,
+    Sequence,
+    Union,
+    Set,
+    TypeVar,
+    Mapping,
+    Any,
+    ClassVar,
+    Type,
+    Optional,
+    Callable,
+    Iterable,
+    Generic,
+)
 
 import pymongo
 import pymongo.client_session
@@ -20,9 +34,10 @@ LoggerType = Union[logging.Logger, logging.LoggerAdapter]
 _CommandReturn = TypeVar("_CommandReturn")
 
 ExecutorLike = TypeVar("ExecutorLike", bound=types.Executor)
+M = TypeVar("M")
 
 
-class Engine(types.Executor):
+class Engine(types.Executor, Generic[M]):
     """
     Client of Mongo Database storage. All DB communication should be handled through this class.
     """
@@ -44,6 +59,7 @@ class Engine(types.Executor):
     _address: str
     _connection_params: Mapping[str, Any]
     reconnect_hooks: List[Callable[[ExecutorLike], None]]
+    mongo_client_cls: Type[M]
 
     __slots__ = (
         "client",
@@ -59,6 +75,7 @@ class Engine(types.Executor):
         "reconnect_hooks",
         "semaphore_tower",
         "disposed",
+        "mongo_client_cls",
     )
 
     def __init__(
@@ -78,6 +95,7 @@ class Engine(types.Executor):
         read_retry_delay: Union[float, int] = 0.701,
         retry_codes: Optional[Sequence[int]] = None,
         logger: Optional[LoggerType] = None,
+        mongo_client_cls: Optional[Type[M]] = pymongo.MongoClient,
         **kwargs,
     ) -> None:
         """
@@ -99,6 +117,7 @@ class Engine(types.Executor):
         """
         super(Engine, self).__init__()
         self.disposed = True
+        self.mongo_client_cls = mongo_client_cls or pymongo.MongoClient
         self.reconnect_hooks = []
         self._address = f"{host}:{port}"
         self.logger = logger or logging.getLogger(type(self).__qualname__)
@@ -137,10 +156,10 @@ class Engine(types.Executor):
     def __str__(self) -> str:
         return f"{type(self).__name__}(server={self.address!r})"
 
-    def _new_client(self) -> pymongo.MongoClient:
-        """Create new instance of MongoClient from `self._connection_params`"""
+    def _new_client(self) -> M:
+        """Create new instance of Mongo Client from `self._connection_params`"""
         try:
-            new_client = pymongo.MongoClient(**self._connection_params)
+            new_client = self.mongo_client_cls(**self._connection_params)
         except (PyMongoError, IOError, KeyError, ValueError) as e:
             self.logger.info(f"Cannot create mongo client because: {e}")
             self.logger.warning(traceback.format_stack())
@@ -198,7 +217,7 @@ class Engine(types.Executor):
         :param database: database name, otherwise just ping client by listing databases
         :return: Is database server reachable?
         """
-
+        database = database or "admin"
         is_ok = False
         retry = max(1, self.read_retry)
         while not is_ok and retry > 0:
@@ -209,10 +228,7 @@ class Engine(types.Executor):
                 except PyMongoError:
                     is_ok = False
             try:
-                _ = self.client.list_databases()
-                is_ok = True
-                if database:
-                    is_ok = self.client.get_database(database).command("ping").get("ok")
+                is_ok = self.client[database].command("ping").get("ok")
             except self.CONNECTION_ERRORS as e:
                 self.logger.info(f"failed to ping database={database!r} - e={e}")
                 time.sleep(self.read_retry_delay)
@@ -223,12 +239,12 @@ class Engine(types.Executor):
         return bool(is_ok)
 
     def reconnect(self) -> None:
-        """Close existing MongoClient and create new one. Thread locked and fork locked."""
+        """Close existing Mongo Client and create new one. Thread locked and fork locked."""
         with self.semaphore_tower:
             return self._reconnect()
 
     def _reconnect(self) -> None:
-        """Close existing MongoClient and create new one"""
+        """Close existing Mongo Client and create new one"""
         self.logger.debug(f"{type(self).__qualname__} - reconnecting client")
         try:
             self.client = self._new_client()

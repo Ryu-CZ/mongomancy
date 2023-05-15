@@ -8,6 +8,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+## [0.1.10] - 2023-05-15
+
+### Changed
+
+- you can now supply mongo client class to `Engine` constructor for example the `mongomock` with `mongo_client_cls=mongomock.MongoClient`
+
 ## [0.1.10] - 2023-05-12
 
 ### Fix

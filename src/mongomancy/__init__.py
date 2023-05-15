@@ -15,6 +15,7 @@ from . import (
 from .engine import Engine
 from .schema import Collection, Database
 from .types import (
+    Executor,
     Index,
     CollectionDefinition,
     Document,

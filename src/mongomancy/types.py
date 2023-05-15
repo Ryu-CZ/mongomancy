@@ -309,6 +309,13 @@ class Executor(metaclass=abc.ABCMeta):
         ...
 
     @abc.abstractmethod
+    def dispose(self) -> None:
+        """
+        Cleanup client resources and disconnect from MongoDB.
+        """
+        ...
+
+    @abc.abstractmethod
     def ping(self, database: Optional[str] = None) -> bool:
         ...
 

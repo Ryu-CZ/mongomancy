@@ -1,3 +1,4 @@
+import inspect
 import logging
 import time
 import traceback
@@ -360,6 +361,11 @@ class Database:
         """
         return self.engine.ping(database=self.name)
 
+    def list_collection_names(self) -> list[str]:
+        if "nameOnly" in inspect.signature(self._database.list_collection_names).parameters:
+            return self._database.list_collection_names(nameOnly=True)
+        return self._database.list_collection_names()
+
     def _create_mongo_collection(
         self,
         definition: types.CollectionDefinition,
@@ -370,7 +376,8 @@ class Database:
         :param definition:
         :return: tuple(collection, is created as new ?)
         """
-        if definition.name in self._database.list_collection_names(nameOnly=True):
+        print(type(self._database).__qualname__)
+        if definition.name in self.list_collection_names():
             self.logger.debug(f"{self.name} - fetched existing collection {definition.name!r}")
             return self._database[definition.name], False
         self.logger.warning(f"{self.name} - missing collection {definition.name!r}")
@@ -422,7 +429,7 @@ class Database:
         self.logger.debug(f"{mongo_collection.full_name} - creating index {index.name!r}")
         try:
             mongo_collection.create_index(
-                keys=index.field_for_mongo(),
+                index.field_for_mongo(),
                 name=index.name,
                 unique=index.unique,
             )
