@@ -1,0 +1,8 @@
+pymongo>=4.2
+twine>=4
+setuptools>65
+pip>22
+certifi>=2022
+build>=0.8
+mongomock
+coverage
