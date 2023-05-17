@@ -1,13 +1,24 @@
+import dataclasses
+import typing as t
 import unittest
 
 import mongomock
+import pymongo.client_session
+import pymongo.errors
 
 from src import mongomancy
 
 
-class TestEngine(unittest.TestCase):
+def new_mock_engine() -> mongomancy.Engine[mongomock.MongoClient]:
+    return mongomancy.Engine("localhost", 27017, mongo_client_cls=mongomock.MongoClient)
+
+
+class TestConnections(unittest.TestCase):
+    engine: mongomancy.Engine
+
     def setUp(self):
-        self.engine = mongomancy.Engine("localhost", 27017, mongo_client_cls=mongomock.MongoClient)
+        self.reconnected_flag = False
+        self.engine = new_mock_engine()
 
     def tearDown(self):
         if self.engine is not None:
@@ -53,9 +64,136 @@ class TestEngine(unittest.TestCase):
         self.engine.reconnect()
         self.assertFalse(self.engine.disposed)
 
+    # not supported by mongomock
+    # def test_session(self):
+    #     with self.engine.start_session() as session_:
+    #         self.assertIsInstance(session_, pymongo.client_session.ClientSession)
+
     def test_get_database(self):
         db_ = self.engine.get_database("test")
         self.assertIsNotNone(db_)
+
+
+@dataclasses.dataclass
+class TestCollection(mongomancy.types.CollectionContainer):
+    dialect_entity: pymongo.collection.Collection
+
+
+class TestQueries(unittest.TestCase):
+    collection: TestCollection
+    engine: mongomancy.Engine[mongomock.MongoClient]
+
+    DB_NAME: t.ClassVar[str] = "engine_unit_tests"
+    COLLECTION_NAME: t.ClassVar[str] = "dummy"
+    ROWS: t.ClassVar[list[dict[str, t.Any]]] = [
+        {"_id": 1, "name": "Pratchett"},
+        {"_id": 2, "name": "Gaiman"},
+        {"_id": 42, "name": "Kanturek"},
+    ]
+    UNKNOWN_DOC: t.ClassVar[dict[str, t.Any]] = {"_id": 404, "name": "Marquis"}
+    CHANGES: t.ClassVar[dict[str, t.Any]] = {"$set": {"updated": True}}
+    PIPELINE = [{"$group": {"_id": "", "sum_ids": {"$sum": "$_id"}}}, {"$project": {"_id": 0, "total_ids": "$sum_ids"}}]
+
+    def setUp(self):
+        self.engine = new_mock_engine()
+        self.collection = TestCollection(
+            dialect_entity=self.engine.get_database(self.DB_NAME).get_collection(self.COLLECTION_NAME)
+        )
+
+    def tearDown(self):
+        if self.collection:
+            self.collection.dialect_entity.drop()
+        if self.engine is not None:
+            self.engine.dispose()
+
+    def test_empty(self):
+        self.collection.dialect_entity.drop()
+        any_doc_ = self.engine.find_one(self.collection, {})
+        self.assertIsNone(any_doc_)
+
+    def test_find_one_in_empty(self):
+        doc_ = self.engine.find_one(self.collection, self.UNKNOWN_DOC)
+        self.assertIsNone(doc_)
+
+    def test_delete_one_from_empty(self):
+        result = self.engine.delete_one(self.collection, self.UNKNOWN_DOC)
+        self.assertEqual(result.deleted_count, 0)
+
+    def test_insert_one_into_empty(self):
+        self.collection.dialect_entity.drop()
+        self.engine.insert_one(self.collection, self.ROWS[0])
+        stored_doc = self.engine.find_one(self.collection, self.ROWS[0])
+        self.assertEqual(stored_doc["_id"], self.ROWS[0]["_id"])
+        self.assertEqual(stored_doc["name"], self.ROWS[0]["name"])
+
+    def update_one_in_empty(self):
+        result = self.engine.update_one(self.collection, self.UNKNOWN_DOC, self.CHANGES)
+        self.assertEqual(result.matched_count, 0)
+
+    def test_insert_duplicate(self):
+        if not self.engine.find_one(self.collection, self.ROWS[0]):
+            self.engine.insert_one(self.collection, self.ROWS[0])
+        with self.assertRaises(pymongo.errors.DuplicateKeyError):
+            self.engine.insert_one(self.collection, self.ROWS[0])
+
+    def test_delete_existing(self):
+        if not self.engine.find_one(self.collection, self.ROWS[0]):
+            self.engine.insert_one(self.collection, self.ROWS[0])
+        result = self.engine.delete_one(self.collection, self.ROWS[0])
+        self.assertEqual(result.deleted_count, 1)
+
+    def test_update_one_existing(self):
+        if not self.engine.find_one(self.collection, self.ROWS[0]):
+            self.engine.insert_one(self.collection, self.ROWS[0])
+        result = self.engine.update_one(self.collection, self.ROWS[0], self.CHANGES)
+        self.assertEqual(result.matched_count, 1)
+        doc_ = self.engine.find_one(self.collection, self.ROWS[0])
+        self.assertIn("updated", doc_)
+        self.assertTrue(doc_.get("updated"))
+
+    def test_insert_many(self):
+        self.collection.dialect_entity.drop()
+        result = self.engine.insert_many(self.collection, self.ROWS)
+        self.assertIsNotNone(result)
+        self.assertEqual(len(result.inserted_ids), len(self.ROWS))
+
+    def test_delete_many(self):
+        self.collection.dialect_entity.drop()
+        insert_result = self.engine.insert_many(self.collection, self.ROWS)
+        delete_result = self.engine.delete_many(self.collection, {})
+        self.assertIsNotNone(delete_result)
+        self.assertEqual(delete_result.deleted_count, len(insert_result.inserted_ids))
+        self.assertEqual(delete_result.deleted_count, len(self.ROWS))
+
+    def test_update_many(self):
+        self.collection.dialect_entity.drop()
+        insert_result = self.engine.insert_many(self.collection, self.ROWS)
+        update_result = self.engine.update_many(self.collection, {}, self.CHANGES)
+        self.assertEqual(update_result.matched_count, len(insert_result.inserted_ids))
+        self.assertEqual(update_result.matched_count, len(self.ROWS))
+
+    def test_find_many(self):
+        self.collection.dialect_entity.drop()
+        insert_result = self.engine.insert_many(self.collection, self.ROWS)
+        found = list(self.engine.find(self.collection, {}))
+        self.assertEqual(len(found), len(insert_result.inserted_ids))
+        self.assertEqual(len(found), len(self.ROWS))
+
+    def test_aggregate(self):
+        self.collection.dialect_entity.drop()
+        _ = self.engine.insert_many(self.collection, self.ROWS)
+        summed = list(self.engine.aggregate(self.collection, self.PIPELINE))
+        self.assertEqual(1, len(summed))
+        self.assertEqual(summed[0]["total_ids"], sum(doc["_id"] for doc in self.ROWS))
+
+    def test_find_one_and_update(self):
+        if not self.engine.find_one(self.collection, self.ROWS[0]):
+            self.engine.insert_one(self.collection, self.ROWS[0])
+        result = self.engine.find_one_and_update(self.collection, self.ROWS[0], self.CHANGES)
+        self.assertIsNotNone(result)
+        doc_ = self.engine.find_one(self.collection, self.ROWS[0])
+        self.assertIn("updated", doc_)
+        self.assertTrue(doc_.get("updated"))
 
 
 if __name__ == "__main__":
