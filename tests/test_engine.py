@@ -86,11 +86,11 @@ class TestQueries(unittest.TestCase):
     DB_NAME: t.ClassVar[str] = "engine_unit_tests"
     COLLECTION_NAME: t.ClassVar[str] = "dummy"
     ROWS: t.ClassVar[list[dict[str, t.Any]]] = [
-        {"_id": 1, "name": "Pratchett"},
-        {"_id": 2, "name": "Gaiman"},
-        {"_id": 42, "name": "Kanturek"},
+        {"_id": 1, "NAME": "Pratchett"},
+        {"_id": 2, "NAME": "Gaiman"},
+        {"_id": 42, "NAME": "Kanturek"},
     ]
-    UNKNOWN_DOC: t.ClassVar[dict[str, t.Any]] = {"_id": 404, "name": "Marquis"}
+    UNKNOWN_DOC: t.ClassVar[dict[str, t.Any]] = {"_id": 404, "NAME": "Marquis"}
     CHANGES: t.ClassVar[dict[str, t.Any]] = {"$set": {"updated": True}}
     PIPELINE = [{"$group": {"_id": "", "sum_ids": {"$sum": "$_id"}}}, {"$project": {"_id": 0, "total_ids": "$sum_ids"}}]
 
@@ -124,7 +124,7 @@ class TestQueries(unittest.TestCase):
         self.engine.insert_one(self.collection, self.ROWS[0])
         stored_doc = self.engine.find_one(self.collection, self.ROWS[0])
         self.assertEqual(stored_doc["_id"], self.ROWS[0]["_id"])
-        self.assertEqual(stored_doc["name"], self.ROWS[0]["name"])
+        self.assertEqual(stored_doc["NAME"], self.ROWS[0]["NAME"])
 
     def update_one_in_empty(self):
         result = self.engine.update_one(self.collection, self.UNKNOWN_DOC, self.CHANGES)

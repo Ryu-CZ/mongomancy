@@ -3,18 +3,7 @@ import logging
 import time
 import traceback
 from dataclasses import dataclass
-from typing import (
-    List,
-    Tuple,
-    Union,
-    TypeVar,
-    Mapping,
-    Any,
-    Optional,
-    Dict,
-    Iterable,
-    ClassVar,
-)
+from typing import List, Tuple, Union, TypeVar, Mapping, Any, Optional, Dict, Iterable, ClassVar
 
 import pymongo
 import pymongo.command_cursor
@@ -23,15 +12,9 @@ import pymongo.results
 import pymongo.typings
 from pymongo.errors import PyMongoError
 
-from . import (
-    types,
-)
+from . import types
 
-__all__ = (
-    "Collection",
-    "Database",
-    "DocumentType",
-)
+__all__ = ("Collection", "Database", "DocumentType")
 
 LoggerType = Union[logging.Logger, logging.LoggerAdapter]
 DocumentType = TypeVar("DocumentType", bound=Mapping[str, Any])
@@ -39,10 +22,7 @@ DocumentType = TypeVar("DocumentType", bound=Mapping[str, Any])
 
 def define_lock_collection(name: str):
     return types.CollectionDefinition(
-        name,
-        default_docs=[
-            types.Document(unique_key={"_id": "master"}, data={"_id": "master", "locked": False}),
-        ],
+        name, default_docs=[types.Document(unique_key={"_id": "master"}, data={"_id": "master", "locked": False})]
     )
 
 
@@ -72,87 +52,40 @@ class Collection:
     def full_name(self) -> str:
         return self.pymongo_collection.full_name
 
-    def find_one(
-        self,
-        where: Optional[types.BsonDict],
-        *args,
-        **kwargs,
-    ) -> Optional[DocumentType]:
+    def find_one(self, where: Optional[types.BsonDict], *args, **kwargs) -> Optional[DocumentType]:
         return self.engine.find_one(self, where, *args, **kwargs)
 
-    def find(
-        self,
-        where: Optional[types.BsonDict],
-        *args,
-        **kwargs,
-    ) -> pymongo.cursor.Cursor[types.BsonDict]:
+    def find(self, where: Optional[types.BsonDict], *args, **kwargs) -> pymongo.cursor.Cursor[types.BsonDict]:
         return self.engine.find(self, where, *args, **kwargs)
 
     def find_one_and_update(
-        self,
-        where: types.BsonDict,
-        changes: types.BsonDict | types.BsonList,
-        *args,
-        **kwargs,
+        self, where: types.BsonDict, changes: types.BsonDict | types.BsonList, *args, **kwargs
     ) -> Optional[types.BsonDict]:
         return self.engine.find_one_and_update(self, where, changes, *args, **kwargs)
 
     def update_one(
-        self,
-        where: Optional[types.BsonDict],
-        changes: types.BsonDict | types.BsonList,
-        *args,
-        **kwargs,
+        self, where: Optional[types.BsonDict], changes: types.BsonDict | types.BsonList, *args, **kwargs
     ) -> pymongo.results.UpdateResult:
         return self.engine.update_one(self, where, changes, *args, **kwargs)
 
     def update_many(
-        self,
-        where: Optional[types.BsonDict],
-        changes: types.BsonDict | types.BsonList,
-        *args,
-        **kwargs,
+        self, where: Optional[types.BsonDict], changes: types.BsonDict | types.BsonList, *args, **kwargs
     ) -> pymongo.results.UpdateResult:
         return self.engine.update_many(self, where, changes, *args, **kwargs)
 
-    def insert_one(
-        self,
-        document: types.BsonDict,
-        *args,
-        **kwargs,
-    ) -> pymongo.results.InsertOneResult:
+    def insert_one(self, document: types.BsonDict, *args, **kwargs) -> pymongo.results.InsertOneResult:
         return self.engine.insert_one(self, document, *args, **kwargs)
 
-    def insert_many(
-        self,
-        documents: Iterable[types.BsonDict],
-        *args,
-        **kwargs,
-    ) -> pymongo.results.InsertManyResult:
+    def insert_many(self, documents: Iterable[types.BsonDict], *args, **kwargs) -> pymongo.results.InsertManyResult:
         return self.engine.insert_many(self, documents, *args, **kwargs)
 
-    def delete_one(
-        self,
-        where: Optional[types.BsonDict],
-        *args,
-        **kwargs,
-    ) -> pymongo.results.DeleteResult:
+    def delete_one(self, where: Optional[types.BsonDict], *args, **kwargs) -> pymongo.results.DeleteResult:
         return self.engine.delete_one(self, where, *args, **kwargs)
 
-    def delete_many(
-        self,
-        where: Optional[types.BsonDict],
-        *args,
-        **kwargs,
-    ) -> pymongo.results.DeleteResult:
+    def delete_many(self, where: Optional[types.BsonDict], *args, **kwargs) -> pymongo.results.DeleteResult:
         return self.engine.delete_many(self, where, *args, **kwargs)
 
-    def aggregate(
-        self,
-        pipeline: Optional[types.List],
-        *args,
-        **kwargs,
-    ) -> pymongo.command_cursor.CommandCursor:
+    def aggregate(self, pipeline: Optional[types.List], *args, **kwargs) -> pymongo.command_cursor.CommandCursor:
         return self.engine.aggregate(self, pipeline, *args, **kwargs)
 
 
@@ -164,12 +97,12 @@ class Database:
         engine = Engine("localhost", 27017)
         logger = logging.getLogger(__name__)
         db = Database(engine=engine, logger=logger)
-        game = CollectionDefinition(name="game", indices=[Index(fields={"game_id": 1})])
-        player = CollectionDefinition(name="player", indices=[Index(fields={"player_id": 1}, unique=True)])
+        game = CollectionDefinition(NAME="game", indices=[Index(FIELDS={"game_id": 1})])
+        player = CollectionDefinition(NAME="player", indices=[Index(FIELDS={"player_id": 1}, UNIQUE=True)])
         db.add_definition(game)
         db.add_definition(player)
         db.create_all()
-        db["game"].find_one({"game_id": 1, "name": "game 1"})
+        db["game"].find_one({"game_id": 1, "NAME": "game 1"})
 
     """
 
@@ -229,7 +162,7 @@ class Database:
         return object.__getattr__(self, item)
 
     def __str__(self) -> str:
-        return f"{type(self).__qualname__}(name={self.name!r})"
+        return f"{type(self).__qualname__}(NAME={self.name!r})"
 
     @property
     def name(self) -> str:
@@ -247,13 +180,16 @@ class Database:
             collection.dialect_entity = self._database[collection.name]
         self.logger.debug(f"{self}.invalidate_cache_hook - switch _collections bindings")
 
+    def drop(self):
+        self.engine.dr.drop()
+
     def get_collection(self, name: str) -> Collection:
         """
-        Get collection by name from existing `self._collections`.
+        Get collection by NAME from existing `self._collections`.
 
-        :param name: unique name of collection
+        :param name: UNIQUE NAME of collection
         :return: instance of Collection or raise errors
-        :raises KeyError: if there is no collection of that name
+        :raises KeyError: if there is no collection of that NAME
         """
         if name not in self._collections:
             raise KeyError(f"collection {name!r} not found")
@@ -274,9 +210,7 @@ class Database:
         """
         lock_collection = self.create_collection(define_lock_collection(self.LOCK_COLLECTION))
         doc = self.engine.find_one_and_update(
-            lock_collection,
-            where={"_id": "master", "locked": False},
-            changes={"$set": {"locked": True}},
+            lock_collection, where={"_id": "master", "locked": False}, changes={"$set": {"locked": True}}
         )
         if not doc:
             # failed to acquire
@@ -289,15 +223,9 @@ class Database:
         """
         Update master lock to unlock state.
         """
-        lock_collection = Collection(
-            dialect_entity=self._database[self.LOCK_COLLECTION],
-            engine=self.engine,
-        )
+        lock_collection = Collection(dialect_entity=self._database[self.LOCK_COLLECTION], engine=self.engine)
         doc = self.engine.find_one_and_update(
-            lock_collection,
-            where={"_id": "master"},
-            changes={"$set": {"locked": False}},
-            upsert=True,
+            lock_collection, where={"_id": "master"}, changes={"$set": {"locked": False}}, upsert=True
         )
         self.logger.debug(f"master lock state before unlock update: {doc}")
 
@@ -326,11 +254,7 @@ class Database:
                 raise e from e
             self._unlock()
 
-    def create_collection(
-        self,
-        definition: types.CollectionDefinition,
-        skip_existing: bool = True,
-    ) -> Collection:
+    def create_collection(self, definition: types.CollectionDefinition, skip_existing: bool = True) -> Collection:
         """
         Create new entity and bind it to this database.
         As side effect collection is added to `self._collections`.
@@ -342,10 +266,7 @@ class Database:
             # already exists, skip initialization
             return self._collections[definition.name]
         mongo_collection, is_new = self._create_mongo_collection(definition)
-        new_collection = Collection(
-            dialect_entity=mongo_collection,
-            engine=self.engine,
-        )
+        new_collection = Collection(dialect_entity=mongo_collection, engine=self.engine)
         if is_new or not skip_existing:
             self._create_indices(definition, mongo_collection)
             _ = self._insert_defaults(definition.default_docs, new_collection)
@@ -367,8 +288,7 @@ class Database:
         return self._database.list_collection_names()
 
     def _create_mongo_collection(
-        self,
-        definition: types.CollectionDefinition,
+        self, definition: types.CollectionDefinition
     ) -> Tuple[pymongo.collection.Collection, bool]:
         """
         Create a new collection in this database if not exists, return existing otherwise.
@@ -413,10 +333,7 @@ class Database:
                 self._create_index(mongo_collection, index, silent)
 
     def _create_index(
-        self,
-        mongo_collection: pymongo.collection.Collection,
-        index: types.Index,
-        silent: bool = True,
+        self, mongo_collection: pymongo.collection.Collection, index: types.Index, silent: bool = True
     ) -> None:
         """
         Create index over collection.
@@ -428,11 +345,7 @@ class Database:
         """
         self.logger.debug(f"{mongo_collection.full_name} - creating index {index.name!r}")
         try:
-            mongo_collection.create_index(
-                index.field_for_mongo(),
-                name=index.name,
-                unique=index.unique,
-            )
+            mongo_collection.create_index(index.field_for_mongo(), name=index.name, unique=index.unique)
             self.logger.info(f"{mongo_collection.full_name} - created index {index.name!r}")
         except PyMongoError as e:
             self.logger.warning(f"{mongo_collection.full_name} - failed to create index {index.name!r} because '{e}'")
@@ -440,11 +353,7 @@ class Database:
                 raise e from e
             self.logger.warning(traceback.format_stack())
 
-    def _insert_defaults(
-        self,
-        docs: Iterable[types.Document],
-        collection: Collection,
-    ) -> int:
+    def _insert_defaults(self, docs: Iterable[types.Document], collection: Collection) -> int:
         """
         Insert default data from definition into collection.
 

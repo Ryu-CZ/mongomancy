@@ -173,12 +173,15 @@ class Engine(types.Executor, Generic[M]):
 
     def get_database(self, name: str) -> pymongo.database.Database:
         """
-        Get pymongo database by name
+        Get pymongo database by NAME
 
-        :param name: database name
+        :param name: database NAME
         :return: pymongo database
         """
         return self.client.get_database(name)
+
+    def drop_database(self, name: str, *args, **kwargs) -> None:
+        return self.client.drop_database(name, *args, **kwargs)
 
     def register_hook(self, reconnect_hook: Callable[[ExecutorLike], None]) -> None:
         """
@@ -214,7 +217,7 @@ class Engine(types.Executor, Generic[M]):
         """
         Is database server reachable?
 
-        :param database: database name, otherwise just ping client by listing databases
+        :param database: database NAME, otherwise just ping client by listing databases
         :return: Is database server reachable?
         """
         database = database or "admin"
@@ -271,7 +274,7 @@ class Engine(types.Executor, Generic[M]):
         :param collection: collection of method used; f.e.: `game` in `game.find_one`
         :param command: method to execute; f.e.: `game.find_one`
         :param args: arguments for command
-        :param command_name_: use this as command name for logging
+        :param command_name_: use this as command NAME for logging
         :param kwargs: key word arguments for command
         :return: return same as command returns
         """

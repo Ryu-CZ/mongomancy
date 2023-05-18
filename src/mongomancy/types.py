@@ -69,22 +69,14 @@ class CollectionContainer(typing.Protocol):
 
 
 class SemaphoreTower:
-    __slots__ = (
-        "multiprocess",
-        "thread",
-        "timeout",
-        "logger",
-    )
+    __slots__ = ("multiprocess", "thread", "timeout", "logger")
     multiprocess: multiprocessing.Semaphore
     thread: threading.Semaphore
     timeout: Optional[float]
     logger: Optional[logging.Logger]
 
     def __init__(
-        self,
-        value: int = 1,
-        timeout: Optional[float] = None,
-        logger: Optional[logging.Logger] = None,
+        self, value: int = 1, timeout: Optional[float] = None, logger: Optional[logging.Logger] = None
     ) -> None:
         """
         Helper to make multiple semaphores work as one critical section
@@ -123,24 +115,15 @@ class Index:
     name: Optional[str]
     unique: Optional[bool]
 
-    __slots__ = (
-        "fields",
-        "name",
-        "unique",
-    )
+    __slots__ = ("fields", "name", "unique")
 
-    def __init__(
-        self,
-        fields: OrderedPairs,
-        name: Optional[str] = None,
-        unique: Optional[bool] = False,
-    ) -> None:
+    def __init__(self, fields: OrderedPairs, name: Optional[str] = None, unique: Optional[bool] = False) -> None:
         self.fields = OrderedDict(fields)
         self.name = name
         self.unique = unique
 
     def field_for_mongo(self) -> List[Tuple[str, Union[str, int]]]:
-        """Format out fields as order of tuples"""
+        """Format out FIELDS as order of tuples"""
         return [(k, v) for k, v in self.fields.items()]
 
 
@@ -160,20 +143,16 @@ class Document:
 @dataclass(slots=True)
 class CollectionDefinition:
     """
-    Collection Definition of name and indexed field
+    Collection Definition of NAME and indexed field
     """
 
     name: str
-    indices: Sequence[Index] = field(
-        default_factory=tuple,
-    )
-    default_docs: Sequence[Document] = field(
-        default_factory=tuple,
-    )
+    indices: Sequence[Index] = field(default_factory=tuple)
+    default_docs: Sequence[Document] = field(default_factory=tuple)
 
     def fill_index_names(self):
         """
-        Do through indices and fill missing `index.name`s. Affects internal state of `self.indices` !
+        Do through indices and fill missing `index.NAME`s. Affects internal state of `self.indices` !
         """
         for index in self.indices:
             if index.name is None:
@@ -199,104 +178,61 @@ class Executor(metaclass=abc.ABCMeta):
 
     @abc.abstractmethod
     def find_one(
-        self,
-        collection: CollectionContainer,
-        where: Optional[BsonDict],
-        *args,
-        **kwargs,
+        self, collection: CollectionContainer, where: Optional[BsonDict], *args, **kwargs
     ) -> Optional[Dict[str, Any]]:
         ...
 
     @abc.abstractmethod
     def find(
-        self,
-        collection: CollectionContainer,
-        where: Optional[BsonDict],
-        *args,
-        **kwargs,
+        self, collection: CollectionContainer, where: Optional[BsonDict], *args, **kwargs
     ) -> pymongo.cursor.Cursor:
         ...
 
     @abc.abstractmethod
     def find_one_and_update(
-        self,
-        collection: CollectionContainer,
-        where: BsonDict,
-        changes: BsonDict | BsonList,
-        *args,
-        **kwargs,
+        self, collection: CollectionContainer, where: BsonDict, changes: BsonDict | BsonList, *args, **kwargs
     ) -> Optional[BsonDict]:
         ...
 
     @abc.abstractmethod
     def update_one(
-        self,
-        collection: CollectionContainer,
-        where: Optional[BsonDict],
-        changes: BsonDict | BsonList,
-        *args,
-        **kwargs,
+        self, collection: CollectionContainer, where: Optional[BsonDict], changes: BsonDict | BsonList, *args, **kwargs
     ) -> pymongo.results.UpdateResult:
         ...
 
     @abc.abstractmethod
     def update_many(
-        self,
-        collection: CollectionContainer,
-        where: Optional[BsonDict],
-        changes: BsonDict | BsonList,
-        *args,
-        **kwargs,
+        self, collection: CollectionContainer, where: Optional[BsonDict], changes: BsonDict | BsonList, *args, **kwargs
     ) -> pymongo.results.UpdateResult:
         ...
 
     @abc.abstractmethod
     def insert_one(
-        self,
-        collection: CollectionContainer,
-        document: Optional[BsonDict],
-        *args,
-        **kwargs,
+        self, collection: CollectionContainer, document: Optional[BsonDict], *args, **kwargs
     ) -> pymongo.results.InsertOneResult:
         ...
 
     @abc.abstractmethod
     def insert_many(
-        self,
-        collection: CollectionContainer,
-        documents: Iterable[BsonDict],
-        *args,
-        **kwargs,
+        self, collection: CollectionContainer, documents: Iterable[BsonDict], *args, **kwargs
     ) -> pymongo.results.InsertManyResult:
         ...
 
     @abc.abstractmethod
     def delete_one(
-        self,
-        collection: CollectionContainer,
-        where: Optional[BsonDict],
-        *args,
-        **kwargs,
+        self, collection: CollectionContainer, where: Optional[BsonDict], *args, **kwargs
     ) -> pymongo.results.DeleteResult:
         ...
 
     @abc.abstractmethod
     def delete_many(
-        self,
-        collection: CollectionContainer,
-        where: Optional[BsonDict],
-        *args,
-        **kwargs,
+        self, collection: CollectionContainer, where: Optional[BsonDict], *args, **kwargs
     ) -> pymongo.results.DeleteResult:
         ...
 
     @abc.abstractmethod
     def aggregate(
-        self,
-        collection: CollectionContainer,
-        pipeline: BsonList,
-        *args,
-        **kwargs,
+        self, collection: CollectionContainer, pipeline: BsonList, *args, **kwargs
     ) -> pymongo.command_cursor.CommandCursor:
         ...
 
@@ -321,4 +257,8 @@ class Executor(metaclass=abc.ABCMeta):
 
     @abc.abstractmethod
     def get_database(self, name: str) -> pymongo.database.Database:
+        ...
+
+    @abc.abstractmethod
+    def drop_database(self, name: str) -> None:
         ...
