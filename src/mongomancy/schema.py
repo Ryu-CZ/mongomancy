@@ -181,7 +181,7 @@ class Database:
         self.logger.debug(f"{self}.invalidate_cache_hook - switch _collections bindings")
 
     def drop(self):
-        self.engine.dr.drop()
+        self.engine.drop_database(self.name)
 
     def get_collection(self, name: str) -> Collection:
         """

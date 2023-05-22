@@ -10,7 +10,15 @@ from src import mongomancy
 
 
 def new_mock_engine() -> mongomancy.Engine[mongomock.MongoClient]:
-    return mongomancy.Engine("localhost", 27017, mongo_client_cls=mongomock.MongoClient)
+    return mongomancy.Engine(
+        "localhost",
+        27017,
+        mongo_client_cls=mongomock.MongoClient,
+        auth_source="admin",
+        auth_mechanism="SCRAM-SHA-256",
+        user="test_user",
+        password="test_password",
+    )
 
 
 class TestConnections(unittest.TestCase):
@@ -112,6 +120,11 @@ class TestQueries(unittest.TestCase):
         self.assertIsNone(any_doc_)
 
     def test_find_one_in_empty(self):
+        doc_ = self.engine.find_one(self.collection, self.UNKNOWN_DOC)
+        self.assertIsNone(doc_)
+
+    def test_find_one_in_empty_disposed(self):
+        self.engine.dispose()
         doc_ = self.engine.find_one(self.collection, self.UNKNOWN_DOC)
         self.assertIsNone(doc_)
 

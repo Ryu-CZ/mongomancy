@@ -198,14 +198,14 @@ class Engine(types.Executor, Generic[M]):
         if self.disposed:
             return
         with self.semaphore_tower:
+            if self.disposed:
+                return
             return self._dispose()
 
     def _dispose(self) -> None:
         """
         Cleanup client resources and disconnect from MongoDB.
         """
-        if self.disposed:
-            return
         try:
             self.client.close()
             self.disposed = True
@@ -258,6 +258,7 @@ class Engine(types.Executor, Generic[M]):
         except (IOError, pymongo.errors.PyMongoError) as e:
             self.logger.error(f"{type(self).__qualname__} - cannot reconnect to mongo server because: {e}")
             raise e from e
+        return
 
     def _retry_command(
         self,

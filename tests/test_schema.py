@@ -178,6 +178,10 @@ class TestSchemaFind(TestSchemaInsert):
         docs = list(self.collection.find({"genre": "adventure"}))
         self.assertEqual(len(docs), len(adventures))
 
+    def test_reconnect_hooks(self):
+        self.db.invalidate_cache_hook(source=self.engine)
+        self.assertIsNotNone(self.collection.pymongo_collection)
+
 
 class TestSchemaUpdate(TestSchemaInsert):
     def setUp(self):
