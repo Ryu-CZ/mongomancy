@@ -120,7 +120,7 @@ class TestSchemaInit(unittest.TestCase):
         self.create_all()
 
 
-class TestSchemaInsert(unittest.TestCase):
+class SchemaSetup(unittest.TestCase):
     engine: mongomancy.Engine
     logger: logging.Logger
     collection: mongomancy.Collection
@@ -133,9 +133,6 @@ class TestSchemaInsert(unittest.TestCase):
         {"_id": 1, "name": "witcher_3", "genre": "adventure"},
         {"_id": 2, "name": "warcraft_3", "genre": "strategy"},
     ]
-
-    def insert_docs(self):
-        _ = self.collection.insert_many(self.DOCS)
 
     def setUp(self):
         self.logger = logging.getLogger(self.DB_NAME)
@@ -154,6 +151,11 @@ class TestSchemaInsert(unittest.TestCase):
         if self.engine is not None:
             self.engine.drop_database(self.DB_NAME)
             self.engine.dispose()
+
+
+class TestSchemaInsert(SchemaSetup):
+    def insert_docs(self):
+        _ = self.collection.insert_many(self.DOCS)
 
     def test_one(self):
         write_result = self.collection.insert_one(self.DOCS[0])

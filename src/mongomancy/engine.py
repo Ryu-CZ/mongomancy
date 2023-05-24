@@ -208,9 +208,9 @@ class Engine(types.Executor, Generic[M]):
         """
         try:
             self.client.close()
-            self.disposed = True
-        except PyMongoError as e:
+        except (pymongo.errors.PyMongoError, *self.CONNECTION_ERRORS) as e:
             self.logger.debug(f"Cannot close mongo client because: {e}")
+        self.disposed = True
         self.logger.debug(f"{self} - disconnect from MongoDB")
 
     def ping(self, database: Optional[str] = None) -> bool:

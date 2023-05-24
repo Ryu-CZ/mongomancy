@@ -2,10 +2,11 @@ import dataclasses
 import typing as t
 import unittest
 
-import mongomock
+from unittest import mock
 import pymongo.client_session
 import pymongo.errors
-
+import mongomock
+import mongomock.mongo_client
 from src import mongomancy
 
 
@@ -71,6 +72,36 @@ class TestConnections(unittest.TestCase):
     def test_reconnect(self):
         self.engine.reconnect()
         self.assertFalse(self.engine.disposed)
+
+    def test_connect_error(self):
+        for err_cls in (IOError, pymongo.errors.PyMongoError):
+            with mock.patch("mongomock.mongo_client.MongoClient.close") as moc_close:
+                moc_close.side_effect = err_cls("Mocked Error")
+                try:
+                    self.engine.dispose()
+                except err_cls as err_inst:
+                    self.assertIsNone(err_inst)
+                self.assertTrue(self.engine.disposed)
+
+    def test_reconnect_close_error(self):
+        for err_cls in (IOError, pymongo.errors.PyMongoError):
+            with mock.patch("mongomock.mongo_client.MongoClient.close") as moc_close:
+                moc_close.side_effect = err_cls("Mocked Error")
+                try:
+                    self.engine.reconnect()
+                except err_cls as err_inst:
+                    self.assertIsNone(err_inst)
+                self.assertFalse(self.engine.disposed)
+
+    def test_reconnect_new_client_error(self):
+        original_client = self.engine.client
+        for err_cls in (IOError, pymongo.errors.PyMongoError):
+            mocked_client_cls = mock.Mock()
+            mocked_client_cls.side_effect = err_cls("<Mocked Error>")
+            self.engine.mongo_client_cls = mocked_client_cls
+            with self.assertRaises(err_cls):
+                self.engine.reconnect()
+        self.assertEqual(original_client, self.engine.client)
 
     # not supported by mongomock
     # def test_session(self):
