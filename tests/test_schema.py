@@ -2,8 +2,10 @@ import logging
 import typing as t
 import unittest
 from collections import OrderedDict
+from unittest import mock
 
 import mongomock
+import pymongo.errors
 
 from src import mongomancy
 
@@ -87,9 +89,12 @@ class TestSchemaInit(unittest.TestCase):
             self.engine.drop_database(self.DB_NAME)
             self.engine.dispose()
 
-    def create_all(self):
-        db = mongomancy.Database(name=self.DB_NAME, logger=self.logger, engine=self.engine)
-        db.add_collection(self.collection_definition)
+    def create_all(self, as_add=True) -> mongomancy.Database:
+        if as_add:
+            db = mongomancy.Database(name=self.DB_NAME, logger=self.logger, engine=self.engine)
+            db.add_collection(self.collection_definition)
+        else:
+            db = mongomancy.Database(self.DB_NAME, self.logger, self.engine, self.collection_definition)
         db.create_all()
         self.assertIsInstance(str(db), str)
         self.assertIsInstance(repr(db), str)
@@ -105,19 +110,36 @@ class TestSchemaInit(unittest.TestCase):
         self.assertIsNone(coll.pymongo_collection)
         coll.pymongo_collection = pymongo_collection
         self.assertEqual(coll.pymongo_collection, pymongo_collection)
+        self.assertTrue(self.COLLECTION_NAME in db)
+        self.assertFalse(self.NOT_COLLECTION_NAME in db)
         with self.assertRaises(KeyError):
             _ = db[self.NOT_COLLECTION_NAME]
         with self.assertRaises(AttributeError):
             _ = getattr(db, self.NOT_COLLECTION_NAME)
+        return db
 
     def test_create_all(self):
-        self.create_all()
+        if self.engine:
+            self.engine.drop_database(self.DB_NAME)
+        _ = self.create_all()
+
+    def test_create_all_quick(self):
+        if self.engine:
+            self.engine.drop_database(self.DB_NAME)
+        _ = self.create_all(as_add=False)
 
     def test_double_create_all(self):
         if self.engine:
             self.engine.drop_database(self.DB_NAME)
+        db = self.create_all()
+        db.create_all()
         self.create_all()
-        self.create_all()
+
+    def test_re_create_all(self):
+        if self.engine:
+            self.engine.drop_database(self.DB_NAME)
+        _ = self.create_all()
+        _ = self.create_all()
 
 
 class SchemaSetup(unittest.TestCase):
@@ -151,6 +173,53 @@ class SchemaSetup(unittest.TestCase):
         if self.engine is not None:
             self.engine.drop_database(self.DB_NAME)
             self.engine.dispose()
+
+
+class IndexSetup(SchemaSetup):
+    DB_NAME: t.ClassVar[str] = "schema_index_tests"
+
+    class TestDatabase(mongomancy.Database):
+        def create_index(
+            self, pymongo_collection: pymongo.collection.Collection, index: mongomancy.Index, silent: bool
+        ):
+            self._create_index(pymongo_collection, index, silent=silent)
+
+    db: TestDatabase
+
+    def setUp(self):
+        self.logger = logging.getLogger(self.DB_NAME)
+        self.reconnected_flag = False
+        self.engine = new_mock_engine()
+        self.engine.drop_database(self.DB_NAME)
+        self.db = self.TestDatabase(name=self.DB_NAME, logger=self.logger, engine=self.engine)
+        self.index = mongomancy.Index(
+            OrderedDict(value=1, name=1), f"ix_{self.COLLECTION_NAME}_value_name", unique=False
+        )
+        self.db.add_collection(mongomancy.CollectionDefinition(name=self.COLLECTION_NAME, indices=[self.index]))
+        self.db.create_all()
+        self.collection = self.db[self.COLLECTION_NAME]
+
+    def test_create_index_raises(self):
+        coll_ = self.db.get_collection(self.COLLECTION_NAME)
+        index_ = mongomancy.Index(OrderedDict(value=1, name=1), f"ix_{self.COLLECTION_NAME}_value_name", unique=False)
+        err_cls = pymongo.errors.PyMongoError
+        with mock.patch("mongomock.collection.Collection.create_index") as moc_close:
+            moc_close.side_effect = err_cls("<Mocked Error>")
+            with self.assertRaises(err_cls):
+                self.db.create_index(coll_.pymongo_collection, index_, silent=False)
+
+    def test_create_index_silent(self):
+        coll_ = self.db.get_collection(self.COLLECTION_NAME)
+        index_ = mongomancy.Index(OrderedDict(value=1, name=1), f"ix_{self.COLLECTION_NAME}_value_name", unique=False)
+        err_cls = pymongo.errors.PyMongoError
+        with mock.patch("mongomock.collection.Collection.create_index") as moc_close:
+            moc_close.side_effect = err_cls("<Mocked Error>")
+            try:
+                self.db.create_index(coll_.pymongo_collection, index_, silent=True)
+                ignored = True
+            except err_cls:
+                ignored = False
+            self.assertTrue(ignored)
 
 
 class TestSchemaInsert(SchemaSetup):
