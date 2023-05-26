@@ -296,7 +296,6 @@ class Database:
         :param definition:
         :return: tuple(collection, is created as new ?)
         """
-        print(type(self._database).__qualname__)
         if definition.name in self.list_collection_names():
             self.logger.debug(f"{self.name} - fetched existing collection {definition.name!r}")
             return self._database[definition.name], False
