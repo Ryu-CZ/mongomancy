@@ -141,6 +141,22 @@ class TestSchemaInit(unittest.TestCase):
         _ = self.create_all()
         _ = self.create_all()
 
+    def test_create_collection_fail(self):
+        if self.engine:
+            self.engine.drop_database(self.DB_NAME)
+
+        class RaisingDB(mongomancy.Database):
+            def create_collection(self, definition: mongomancy.types.CollectionDefinition, skip_existing: bool = True):
+                if definition.name == TestSchemaInit.COLLECTION_NAME:
+                    raise IOError("<Mocked Error>")
+                return super().create_collection(definition, skip_existing)
+
+        db = RaisingDB(name=self.DB_NAME, logger=self.logger, engine=self.engine)
+        db.add_collection(self.collection_definition)
+        print(db.topology)
+        with self.assertRaises(IOError):
+            db.create_all(skip_existing=False)
+
 
 class SchemaSetup(unittest.TestCase):
     engine: mongomancy.Engine
@@ -220,6 +236,31 @@ class IndexSetup(SchemaSetup):
             except err_cls:
                 ignored = False
             self.assertTrue(ignored)
+
+
+class CollectionSetup(SchemaSetup):
+    DB_NAME: t.ClassVar[str] = "schema_collection_tests"
+    new_collection_definition: mongomancy.CollectionDefinition
+
+    def setUp(self):
+        self.logger = logging.getLogger(self.DB_NAME)
+        self.reconnected_flag = False
+        self.engine = new_mock_engine()
+        self.engine.drop_database(self.DB_NAME)
+        self.db = mongomancy.Database(name=self.DB_NAME, logger=self.logger, engine=self.engine)
+        self.index = mongomancy.Index(
+            OrderedDict(value=1, name=1), f"ix_{self.COLLECTION_NAME}_value_name", unique=False
+        )
+        self.new_collection_definition = mongomancy.CollectionDefinition(
+            name=self.COLLECTION_NAME, indices=[self.index]
+        )
+
+    def test_create_collection_raises(self):
+        with mock.patch("mongomock.database.Database.create_collection") as mocked_create:
+            for err_cls in (pymongo.errors.CollectionInvalid, pymongo.errors.OperationFailure):
+                mocked_create.side_effect = err_cls("<Mocked Error>")
+                coll_ = self.db.create_collection(self.new_collection_definition)
+                self.assertIsNotNone(coll_)
 
 
 class TestSchemaInsert(SchemaSetup):
