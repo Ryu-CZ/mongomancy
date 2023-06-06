@@ -8,6 +8,17 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+## [0.1.12] - 2023-06-06
+
+### Added
+
+- unittests
+
+### Changed
+
+- typing and small fixes on reconnect
+- separate base requirements and requirements-ev
+
 ## [0.1.11] - 2023-05-15
 
 ### Changed
