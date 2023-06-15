@@ -134,7 +134,7 @@ class Database:
         engine: types.Executor,
         *collections: types.CollectionDefinition,
         wait_step: float = 7,
-        max_wait: float = 90,
+        max_wait: float = 55,
     ) -> None:
         self.max_wait = max_wait
         self.wait_step = wait_step
@@ -237,22 +237,22 @@ class Database:
         """
         with self.semaphore_tower:
             wait_time = 0
-            while not self._lock():
-                self.logger.debug(f"create_all - process or thread is waiting for master lock {wait_time}sec")
-                time.sleep(self.wait_step)
-                wait_time += self.wait_step
-                if wait_time > self.max_wait:
-                    self.logger.warning(f"create_all - wait timeout after {wait_time}sec and stops waiting")
-                    self._unlock()
-                    break
             try:
+                while not self._lock():
+                    self.logger.debug(f"create_all - process or thread is waiting for master lock {wait_time}sec")
+                    time.sleep(self.wait_step)
+                    wait_time += self.wait_step
+                    if wait_time > self.max_wait:
+                        self.logger.warning(f"create_all - wait timeout after {wait_time}sec and stops waiting")
+                        self._unlock()
+                        break
                 for collection_definition in self.topology:
                     _ = self.create_collection(collection_definition, skip_existing)
             except (Exception, KeyError, IndexError, IOError) as e:
                 self.logger.error(f"create_all failed on {e}")
-                self._unlock()
                 raise e from e
-            self._unlock()
+            finally:
+                self._unlock()
 
     def create_collection(self, definition: types.CollectionDefinition, skip_existing: bool = True) -> Collection:
         """

@@ -8,6 +8,16 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+## [0.1.13] - 2023-06-15
+
+### Changed
+
+- reduced default `max_wait` of database to 55 sec
+
+### Fixed
+
+- perform db unlock on fail
+
 ## [0.1.12] - 2023-06-06
 
 ### Added
