@@ -100,6 +100,21 @@ db.add_collection(player)
 db.create_all()
 db["game"].find({"genre": "adventure"})
 ```
+
+## Tests
+
+You can run tests with coverage tracing:
+
+```shell
+python -m coverage run -m unittest tests/test_* -v 
+```
+
+To generate coverage report:
+
+```shell
+python -m coverage html   
+```
+
 ## Build
 
 Clone repo and set up your pypi repo account credentials on build for build environment.
