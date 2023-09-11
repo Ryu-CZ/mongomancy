@@ -8,6 +8,13 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+
+## [0.1.14] - 2023-09-11
+
+### Fixed
+
+- missing attribute fixed for `AttributeError: 'Collection' object has no attribute 'database'`, now covered by tests
+
 ## [0.1.13] - 2023-06-15
 
 ### Changed

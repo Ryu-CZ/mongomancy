@@ -311,7 +311,7 @@ class Engine(types.Executor, Generic[M]):
                 time.sleep(self.write_retry_delay)
                 self.reconnect()
             if _error:
-                collection = self.client[collection.database.name][collection.name]
+                collection = self.client[collection.dialect_entity.database.name][collection.dialect_entity.name]
         if _error:
             command_name_ = command_name_ or command or "<unknown_command>"
             self.logger.warning(f"fatal fail - {command_name_} args={args}, kwargs={kwargs} - after {attempt}x retry")

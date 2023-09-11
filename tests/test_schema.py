@@ -3,7 +3,7 @@ import typing as t
 import unittest
 from collections import OrderedDict
 from unittest import mock
-
+import functools
 import mongomock
 import pymongo.errors
 
@@ -293,6 +293,43 @@ class TestSchemaFind(TestSchemaInsert):
     def test_reconnect_hooks(self):
         self.db.invalidate_cache_hook(source=self.engine)
         self.assertIsNotNone(self.collection.pymongo_collection)
+
+    def test_one_retry(self):
+        scenario = [
+            pymongo.errors.AutoReconnect,
+            pymongo.errors.WriteError("test error", code=10107),
+            self.DOCS[0],
+        ]
+        with mock.patch("mongomock.collection.Collection.find_one") as moc_find:
+            moc_find.side_effect = scenario
+            doc = self.collection.find_one({"name": self.DOCS[0]["name"]})
+            self.assertEqual(self.DOCS[0]["_id"], doc.get("_id"))
+
+    def test_one_retry_raises_write(self):
+        scenario = [
+            pymongo.errors.WriteError("test error", code=-7),
+            self.DOCS[0],
+        ]
+        with mock.patch("mongomock.collection.Collection.find_one") as moc_find:
+            moc_find.side_effect = scenario
+            with self.assertRaises(pymongo.errors.WriteError):
+                _ = self.collection.find_one({"name": self.DOCS[0]["name"]})
+
+    def test_one_retry_raises_unknown(self):
+        scenario = [
+            pymongo.errors.ConfigurationError("test ConfigurationError"),
+            self.DOCS[0],
+        ]
+        with mock.patch("mongomock.collection.Collection.find_one") as moc_find:
+            moc_find.side_effect = scenario
+            with self.assertRaises(pymongo.errors.ConfigurationError):
+                _ = self.collection.find_one({"name": self.DOCS[0]["name"]})
+
+    def test_one_retry_raises_fail_all(self):
+        with mock.patch("mongomock.collection.Collection.find_one") as moc_find:
+            moc_find.side_effect = pymongo.errors.AutoReconnect
+            with self.assertRaises(pymongo.errors.AutoReconnect):
+                _ = self.collection.find_one({"name": self.DOCS[0]["name"]})
 
 
 class TestSchemaUpdate(TestSchemaInsert):
