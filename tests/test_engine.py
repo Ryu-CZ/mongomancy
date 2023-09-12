@@ -1,4 +1,5 @@
 import dataclasses
+import functools
 import typing as t
 import unittest
 
@@ -20,6 +21,22 @@ def new_mock_engine() -> mongomancy.Engine[mongomock.MongoClient]:
         user="test_user",
         password="test_password",
     )
+
+
+def new_session(
+    mongo_client: mongomock.MongoClient,
+    causal_consistency=None,
+    default_transaction_options=None,
+    snapshot=None,
+) -> pymongo.client_session.ClientSession:
+    # noinspection PyProtectedMember
+    server_session = pymongo.client_session._EmptyServerSession()
+    opts = pymongo.client_session.SessionOptions(
+        causal_consistency=causal_consistency,
+        default_transaction_options=default_transaction_options,
+        snapshot=snapshot,
+    )
+    return pymongo.client_session.ClientSession(mongo_client, server_session, opts, True)
 
 
 class TestConnections(unittest.TestCase):
@@ -52,9 +69,30 @@ class TestConnections(unittest.TestCase):
     def test_repr(self):
         self.assertIsInstance(repr(self.engine), str)
 
-    def test_ping(self):
+    def test_ping_ok(self):
         is_ok = self.engine.ping()
         self.assertTrue(is_ok, "mongo server cannot be reached on ping")
+
+    def test_ping_error_auto_reconnect(self):
+        with mock.patch("mongomock.database.Database.command") as mock_command:
+            mock_command.side_effect = [pymongo.errors.AutoReconnect("test error")] * self.engine.read_retry
+            is_ok = self.engine.ping()
+            self.assertFalse(is_ok)
+
+    def test_ping_error_general(self):
+        with mock.patch("mongomock.database.Database.command") as mock_command:
+            mock_command.side_effect = [pymongo.errors.PyMongoError("test error")] * self.engine.read_retry
+            is_ok = self.engine.ping()
+            self.assertFalse(is_ok)
+
+    def test_ping_error_general_reconnect(self):
+        self.engine.dispose()
+        with mock.patch("mongomock.database.Database.command") as mock_command:
+            mock_command.side_effect = [pymongo.errors.PyMongoError("test error")] * self.engine.read_retry
+            with mock.patch("src.mongomancy.engine.Engine.reconnect") as mock_reconnect:
+                mock_reconnect.side_effect = [pymongo.errors.PyMongoError("test error")] * self.engine.read_retry
+                is_ok = self.engine.ping()
+                self.assertFalse(is_ok)
 
     def test_disposed_ping(self):
         self.engine.dispose()
@@ -68,6 +106,10 @@ class TestConnections(unittest.TestCase):
         self.engine.dispose()
         self.engine.dispose()
         self.assertTrue(self.engine.disposed)
+        # test synced dispose
+        with mock.patch("src.mongomancy.engine.Engine.disposed", new_callable=mock.PropertyMock) as mock_disposed:
+            mock_disposed.side_effect = [False, True]
+            self.engine.dispose()
 
     def test_reconnect(self):
         self.engine.reconnect()
@@ -102,11 +144,6 @@ class TestConnections(unittest.TestCase):
             with self.assertRaises(err_cls):
                 self.engine.reconnect()
         self.assertEqual(original_client, self.engine.client)
-
-    # not supported by mongomock
-    # def test_session(self):
-    #     with self.engine.start_session() as session_:
-    #         self.assertIsInstance(session_, pymongo.client_session.ClientSession)
 
     def test_get_database(self):
         db_ = self.engine.get_database("test")
@@ -144,6 +181,14 @@ class TestQueries(unittest.TestCase):
             self.collection.dialect_entity.drop()
         if self.engine is not None:
             self.engine.dispose()
+
+    # not supported by mongo mock
+    def test_start_session(self):
+        with mock.patch("mongomock.mongo_client.MongoClient.start_session") as mock_call:
+            mock_call.side_effect = functools.partial(new_session, self.engine.client)
+            session = self.engine.start_session()
+            self.assertIsNotNone(session)
+            self.assertIsInstance(session, pymongo.client_session.ClientSession)
 
     def test_empty(self):
         self.collection.dialect_entity.drop()

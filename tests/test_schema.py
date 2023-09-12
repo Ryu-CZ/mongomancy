@@ -3,7 +3,6 @@ import typing as t
 import unittest
 from collections import OrderedDict
 from unittest import mock
-import functools
 import mongomock
 import pymongo.errors
 
@@ -40,10 +39,23 @@ class TestDatabase(unittest.TestCase):
         pinged = db.ping()
         self.assertTrue(pinged)
 
-    def test_dropping(self):
+    def test_drop_from_engine(self):
         db = self.new_database()
         self.engine.drop_database(db.name)
         self.assertNotIn(db.name, self.engine.client.list_database_names())
+
+    def test_drop(self):
+        db = self.new_database()
+        db.drop()
+        self.assertNotIn(db.name, self.engine.client.list_database_names())
+
+    def test_missing_lock(self):
+        db = self.new_database()
+        db.wait_step = 0.1
+        db.max_wait = 0.175
+        with mock.patch("src.mongomancy.engine.Engine.find_one_and_update") as mock_find_clock:
+            mock_find_clock.side_effect = [False, mock.DEFAULT, mock.DEFAULT, mock.DEFAULT, None]
+            db.create_all(skip_existing=True)
 
 
 class TestIndex(unittest.TestCase):
@@ -153,9 +165,22 @@ class TestSchemaInit(unittest.TestCase):
 
         db = RaisingDB(name=self.DB_NAME, logger=self.logger, engine=self.engine)
         db.add_collection(self.collection_definition)
-        print(db.topology)
+        self.logger.info(f"{db.topology=}")
         with self.assertRaises(IOError):
             db.create_all(skip_existing=False)
+
+    def test_list_collection_names_old(self):
+        if self.engine:
+            self.engine.drop_database(self.DB_NAME)
+        db = self.create_all()
+        original_list = db._database.list_collection_names
+
+        def masked_collection_names(nameOnly=False):
+            return original_list()
+
+        db._database.list_collection_names = masked_collection_names
+        self.assertIn(self.collection_definition.name, db.list_collection_names())
+        self.engine.drop_database(self.DB_NAME)
 
 
 class SchemaSetup(unittest.TestCase):
@@ -171,6 +196,9 @@ class SchemaSetup(unittest.TestCase):
         {"_id": 1, "name": "witcher_3", "genre": "adventure"},
         {"_id": 2, "name": "warcraft_3", "genre": "strategy"},
     ]
+
+    def insert_docs(self):
+        _ = self.collection.insert_many(self.DOCS)
 
     def setUp(self):
         self.logger = logging.getLogger(self.DB_NAME)
@@ -262,11 +290,16 @@ class CollectionSetup(SchemaSetup):
                 coll_ = self.db.create_collection(self.new_collection_definition)
                 self.assertIsNotNone(coll_)
 
+    def test_get_collection(self):
+        with self.assertRaises(KeyError):
+            self.db.get_collection(self.COLLECTION_NAME)
+        _ = self.db.create_collection(self.new_collection_definition)
+        col_ = self.db.get_collection(self.COLLECTION_NAME)
+        self.assertIsInstance(col_, mongomancy.Collection)
+        self.assertEqual(col_.name, self.COLLECTION_NAME)
+
 
 class TestSchemaInsert(SchemaSetup):
-    def insert_docs(self):
-        _ = self.collection.insert_many(self.DOCS)
-
     def test_one(self):
         write_result = self.collection.insert_one(self.DOCS[0])
         self.assertIsNotNone(write_result.inserted_id)
@@ -276,7 +309,7 @@ class TestSchemaInsert(SchemaSetup):
         self.assertEqual(len(write_result.inserted_ids), len(self.DOCS[1:]))
 
 
-class TestSchemaFind(TestSchemaInsert):
+class TestSchemaFind(SchemaSetup):
     def setUp(self):
         super().setUp()
         self.insert_docs()
@@ -332,7 +365,7 @@ class TestSchemaFind(TestSchemaInsert):
                 _ = self.collection.find_one({"name": self.DOCS[0]["name"]})
 
 
-class TestSchemaUpdate(TestSchemaInsert):
+class TestSchemaUpdate(SchemaSetup):
     def setUp(self):
         super().setUp()
         self.insert_docs()
@@ -358,7 +391,7 @@ class TestSchemaUpdate(TestSchemaInsert):
         self.assertEqual(len(docs_updated), len(self.DOCS))
 
 
-class TestSchemaRemove(TestSchemaInsert):
+class TestSchemaRemove(SchemaSetup):
     def setUp(self):
         super().setUp()
         self.insert_docs()
@@ -371,3 +404,25 @@ class TestSchemaRemove(TestSchemaInsert):
         adventures = list(filter(lambda x: x.get("genre") == "adventure", self.DOCS))
         changes = self.collection.delete_many({"genre": "adventure"})
         self.assertEqual(changes.deleted_count, len(adventures))
+
+
+class TestSchemaAggregate(SchemaSetup):
+    def setUp(self):
+        super().setUp()
+        self.insert_docs()
+
+    def test_sum(self):
+        sum_genres = {
+            "$group": {
+                "_id": "$genre",
+                # Count the number of docs in the genre
+                "count": {"$sum": 1},
+            }
+        }
+        self.assertIn("genre", self.DOCS[0])
+        sums = self.collection.aggregate(
+            pipeline=[
+                sum_genres,
+            ]
+        )
+        self.assertGreater(len(tuple(sums)), 0)
