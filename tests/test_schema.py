@@ -175,7 +175,9 @@ class TestSchemaInit(unittest.TestCase):
         db = self.create_all()
         original_list = db._database.list_collection_names
 
+        # noinspection PyPep8Naming
         def masked_collection_names(nameOnly=False):
+            _ = nameOnly
             return original_list()
 
         db._database.list_collection_names = masked_collection_names
