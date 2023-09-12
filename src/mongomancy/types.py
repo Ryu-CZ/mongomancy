@@ -133,7 +133,9 @@ class Document:
     Abstraction of a MongoDB document where unique_key is one or more elements clearly identifying one document
 
     Example:
-        Document(unique_key={"color_name": "red"}, data={"color_name": "red", "color_hex": "#ff0000"})
+
+        .. code-block:: python
+            Document(unique_key={"color_name": "red"}, data={"color_name": "red", "color_hex": "#ff0000"})
     """
 
     unique_key: Optional[BsonDict]

@@ -93,17 +93,18 @@ class Database:
     """
     Database abstraction with reconnect support
 
-    Example of usage: ..
-        engine = Engine("localhost", 27017)
-        logger = logging.getLogger(__name__)
-        db = Database(engine=engine, logger=logger)
-        game = CollectionDefinition(NAME="game", indices=[Index(FIELDS={"game_id": 1})])
-        player = CollectionDefinition(NAME="player", indices=[Index(FIELDS={"player_id": 1}, UNIQUE=True)])
-        db.add_definition(game)
-        db.add_definition(player)
-        db.create_all()
-        db["game"].find_one({"game_id": 1, "NAME": "game 1"})
+    Example:
 
+        .. code-block:: python
+            engine = Engine("localhost", 27017)
+            logger = logging.getLogger(__name__)
+            db = Database(engine=engine, logger=logger)
+            game = CollectionDefinition(NAME="game", indices=[Index(FIELDS={"game_id": 1})])
+            player = CollectionDefinition(NAME="player", indices=[Index(FIELDS={"player_id": 1}, UNIQUE=True)])
+            db.add_definition(game)
+            db.add_definition(player)
+            db.create_all()
+            db["game"].find_one({"game_id": 1, "NAME": "game 1"})
     """
 
     engine: types.Executor
