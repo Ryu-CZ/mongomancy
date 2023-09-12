@@ -3,6 +3,7 @@ import typing as t
 import unittest
 from collections import OrderedDict
 from unittest import mock
+
 import mongomock
 import pymongo.errors
 
