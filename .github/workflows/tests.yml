@@ -31,8 +31,8 @@ jobs:
       - name: Upload test coverage results
         uses: actions/upload-artifact@v3
         with:
-          name: .coverage.${{ matrix.python-version }}.${{github.ref_name}}.dat
-          path: ${{ github.workspace }}/.coverage.${{ matrix.python-version }}.${{github.ref_name}}.dat
+          name: ".coverage.${{ matrix.python-version }}.${{github.ref_name}}.dat"
+          path: ".coverage.${{ matrix.python-version }}.${{github.ref_name}}.dat"
         # Use always() to always run this step to publish test results when there are test failures
         if: ${{ always() }}
   merge-coverage:
@@ -68,5 +68,7 @@ jobs:
         uses: actions/download-artifact@v3
         with:
           name: coverage-${{github.ref_name}}.xml
+      - name: Display structure of workspace
+        run: ls -lAp ${{ github.workspace }}
       - name: Upload to Codecov
         uses: codecov/codecov-action@v3
