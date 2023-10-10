@@ -46,10 +46,8 @@ jobs:
         uses: actions/download-artifact@v3
         with:
           path: ${{ github.workspace }}
-      - name: Display structure of downloaded files
-        run: ls -R ${{ github.workspace }}
       - name: Display structure of workspace
-        run: ls -la ${{ github.workspace }}
+        run: ls -lAp ${{ github.workspace }}
       - name: Test with pytest
         run: | 
           python -m coverage combine
