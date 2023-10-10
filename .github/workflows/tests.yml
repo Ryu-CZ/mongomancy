@@ -44,8 +44,6 @@ jobs:
           python -m pip install -U coverage
       - name: Download artifacts
         uses: actions/download-artifact@v3
-        with:
-          path: ${{ github.workspace }}
       - name: Display structure of workspace
         run: ls -lAp ${{ github.workspace }}
       - name: Test with pytest
