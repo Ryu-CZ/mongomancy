@@ -48,7 +48,7 @@ jobs:
           path: ${{ github.workspace }}
       - name: Unwrap generated nesting
         run: |
-            find . -type f -name "*.dat" -exec mv {} destination_folder/ \;
+            find . -type f -name "*.dat" -exec mv {} ${{ github.workspace }}/ \;
       - name: Display structure of workspace
         run: ls -lAp ${{ github.workspace }}
       - name: Combine tests
