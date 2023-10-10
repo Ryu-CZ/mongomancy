@@ -31,7 +31,7 @@ jobs:
       - name: Upload test coverage results
         uses: actions/upload-artifact@v3
         with:
-          path: .coverage.${{ matrix.python-version }}.${{github.ref_name}}.dat
+          name: .coverage.${{ matrix.python-version }}.${{github.ref_name}}.dat
         # Use always() to always run this step to publish test results when there are test failures
         if: ${{ always() }}
   merge-coverage:
@@ -41,8 +41,6 @@ jobs:
       - name: Install coverage
         run: |
           python -m pip install -U coverage
-      - name: Checkout
-        uses: actions/checkout@v3
       - name: Download artifacts
         uses: actions/download-artifact@v3
       - name: Display structure of downloaded files
