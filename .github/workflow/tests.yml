@@ -1,0 +1,69 @@
+name: tests
+
+on:
+  push:
+    branches: ["dev"]
+  pull_request:
+    branches: ["dev"]
+
+jobs:
+  run-test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.10", "3.11"]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Setup Python # Set Python version
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
+      # Install pip and pytest
+      - name: Install dependencies
+        run: | 
+          python -m pip install -Ur requirements-dev.txt
+      - name: Test with pytest
+        run: | 
+          python -m coverage run --context=${{ matrix.python-version }} -a -m unittest tests/test_*
+          python -m coverage xml -o coverage-results-${{github.ref_name}}-${{ matrix.python-version }}.xml
+      - name: Upload test coverage results
+        uses: actions/upload-artifact@v3
+        with:
+          name: unittest-results-${{github.ref_name}}-${{ matrix.python-version }}
+          path: coverage-results-${{github.ref_name}}-${{ matrix.python-version }}.xml
+        # Use always() to always run this step to publish test results when there are test failures
+        if: ${{ always() }}
+  merge-coverage:
+    needs: [ run-test ]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Download artifacts
+        uses: actions/download-artifact@v3
+      - name: Test with pytest
+        run: | 
+          python -m coverage combine *.xml
+          python -m coverage xml -o coverage-${{github.ref_name}}.xml
+      - name: Upload combined coverage results
+        uses: actions/upload-artifact@v3
+        with:
+          name: unittest-coverage-${{github.ref_name}}-combined
+          path: coverage-${{github.ref_name}}.xml
+        # Use always() to always run this step to publish test results when there are test failures
+        if: ${{ always() }}
+
+  upload-to-codecov:
+    needs: [ merge-coverage ]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Download artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: coverage-${{github.ref_name}}.xml
+      - name: Upload to Codecov
+        uses: codecov/codecov-action@v3

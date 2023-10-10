@@ -1,5 +1,7 @@
 # Mongomancy
 
+[![codecov](https://codecov.io/gh/Ryu-CZ/mongomancy/graph/badge.svg?token=3WT6TSHPPQ)](https://codecov.io/gh/Ryu-CZ/mongomancy)
+
 ## Description
 
 Project contains abstraction of `pymongo` driver for automatic reconnect on master switch in remote MongoDB cluster. It
