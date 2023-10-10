@@ -26,7 +26,7 @@ jobs:
           python -m pip install -Ur requirements-dev.txt
       - name: Test with pytest
         run: | 
-          python -m coverage run --context=${{ matrix.python-version }} -a -m unittest tests/test_*
+          python -m coverage run --context=python${{ matrix.python-version }} -a -m unittest tests/test_*
           mv .coverage .coverage.${{ matrix.python-version }}.${{github.ref_name}}.dat
       - name: Upload test coverage results
         uses: actions/upload-artifact@v3
