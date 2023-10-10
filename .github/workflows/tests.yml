@@ -45,10 +45,10 @@ jobs:
       - name: Download artifacts
         uses: actions/download-artifact@v3
         with:
-          path: ${{ github.workspace }}
+          path: ${{ github.workspace }}/downloaded/
       - name: Unwrap generated nesting
         run: |
-            find . -type f -name "*.dat" -exec mv {} ${{ github.workspace }}/ \;
+            find ./downloaded/ -type f -name "*.dat" -exec mv {} ${{ github.workspace }}/ \;
       - name: Display structure of workspace
         run: ls -lAp ${{ github.workspace }}
       - name: Combine tests
