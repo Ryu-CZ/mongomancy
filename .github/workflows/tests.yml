@@ -42,6 +42,8 @@ jobs:
       - name: Install coverage
         run: |
           python -m pip install -U coverage
+      - name: Checkout
+        uses: actions/checkout@v3
       - name: Download artifacts
         uses: actions/download-artifact@v3
         with:
