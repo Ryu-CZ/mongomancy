@@ -46,9 +46,12 @@ jobs:
         uses: actions/download-artifact@v3
         with:
           path: ${{ github.workspace }}
+      - name: Unwrap generated nesting
+        run: |
+            find . -type f -name "*.dat" -exec mv {} destination_folder/ \;
       - name: Display structure of workspace
         run: ls -lAp ${{ github.workspace }}
-      - name: Test with pytest
+      - name: Combine tests
         run: | 
           python -m coverage combine
           python -m coverage xml -o coverage-${{github.ref_name}}.xml
