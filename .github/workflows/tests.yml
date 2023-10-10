@@ -38,7 +38,13 @@ jobs:
   merge-coverage:
     needs: [ run-test ]
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: [ "3.11" ]
     steps:
+      - name: Install coverage
+        run: |
+          python -m pip install -U coverage
       - name: Checkout
         uses: actions/checkout@v3
       - name: Download artifacts
