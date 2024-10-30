@@ -10,6 +10,7 @@ import pymongo.command_cursor
 import pymongo.database
 import pymongo.results
 import pymongo.typings
+import pymongo.collection
 from pymongo.errors import PyMongoError
 
 from . import types

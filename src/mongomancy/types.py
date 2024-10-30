@@ -24,6 +24,7 @@ from typing import (
 import pymongo.client_session
 import pymongo.database
 import pymongo.results
+import pymongo.collection
 from bson import ObjectId
 from pymongo.command_cursor import CommandCursor
 
@@ -175,76 +176,63 @@ class Executor(metaclass=abc.ABCMeta):
         causal_consistency: Optional[bool] = None,
         default_transaction_options: Optional[pymongo.client_session.TransactionOptions] = None,
         snapshot: Optional[bool] = False,
-    ) -> pymongo.client_session.ClientSession:
-        ...
+    ) -> pymongo.client_session.ClientSession: ...
 
     @abc.abstractmethod
     def find_one(
         self, collection: CollectionContainer, where: Optional[BsonDict], *args, **kwargs
-    ) -> Optional[Dict[str, Any]]:
-        ...
+    ) -> Optional[Dict[str, Any]]: ...
 
     @abc.abstractmethod
     def find(
         self, collection: CollectionContainer, where: Optional[BsonDict], *args, **kwargs
-    ) -> pymongo.cursor.Cursor:
-        ...
+    ) -> pymongo.cursor.Cursor: ...
 
     @abc.abstractmethod
     def find_one_and_update(
         self, collection: CollectionContainer, where: BsonDict, changes: BsonDict | BsonList, *args, **kwargs
-    ) -> Optional[BsonDict]:
-        ...
+    ) -> Optional[BsonDict]: ...
 
     @abc.abstractmethod
     def update_one(
         self, collection: CollectionContainer, where: Optional[BsonDict], changes: BsonDict | BsonList, *args, **kwargs
-    ) -> pymongo.results.UpdateResult:
-        ...
+    ) -> pymongo.results.UpdateResult: ...
 
     @abc.abstractmethod
     def update_many(
         self, collection: CollectionContainer, where: Optional[BsonDict], changes: BsonDict | BsonList, *args, **kwargs
-    ) -> pymongo.results.UpdateResult:
-        ...
+    ) -> pymongo.results.UpdateResult: ...
 
     @abc.abstractmethod
     def insert_one(
         self, collection: CollectionContainer, document: Optional[BsonDict], *args, **kwargs
-    ) -> pymongo.results.InsertOneResult:
-        ...
+    ) -> pymongo.results.InsertOneResult: ...
 
     @abc.abstractmethod
     def insert_many(
         self, collection: CollectionContainer, documents: Iterable[BsonDict], *args, **kwargs
-    ) -> pymongo.results.InsertManyResult:
-        ...
+    ) -> pymongo.results.InsertManyResult: ...
 
     @abc.abstractmethod
     def delete_one(
         self, collection: CollectionContainer, where: Optional[BsonDict], *args, **kwargs
-    ) -> pymongo.results.DeleteResult:
-        ...
+    ) -> pymongo.results.DeleteResult: ...
 
     @abc.abstractmethod
     def delete_many(
         self, collection: CollectionContainer, where: Optional[BsonDict], *args, **kwargs
-    ) -> pymongo.results.DeleteResult:
-        ...
+    ) -> pymongo.results.DeleteResult: ...
 
     @abc.abstractmethod
     def aggregate(
         self, collection: CollectionContainer, pipeline: BsonList, *args, **kwargs
-    ) -> pymongo.command_cursor.CommandCursor:
-        ...
+    ) -> pymongo.command_cursor.CommandCursor: ...
 
     @abc.abstractmethod
-    def register_hook(self, reconnect_hook: Callable[["Executor"], None]) -> None:
-        ...
+    def register_hook(self, reconnect_hook: Callable[["Executor"], None]) -> None: ...
 
     @abc.abstractmethod
-    def reconnect(self) -> None:
-        ...
+    def reconnect(self) -> None: ...
 
     @abc.abstractmethod
     def dispose(self) -> None:
@@ -254,13 +242,10 @@ class Executor(metaclass=abc.ABCMeta):
         ...
 
     @abc.abstractmethod
-    def ping(self, database: Optional[str] = None) -> bool:
-        ...
+    def ping(self, database: Optional[str] = None) -> bool: ...
 
     @abc.abstractmethod
-    def get_database(self, name: str) -> pymongo.database.Database:
-        ...
+    def get_database(self, name: str) -> pymongo.database.Database: ...
 
     @abc.abstractmethod
-    def drop_database(self, name: str) -> None:
-        ...
+    def drop_database(self, name: str) -> None: ...

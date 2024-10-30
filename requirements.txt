@@ -1,2 +1,2 @@
-pymongo>=4.2
+pymongo>=4.10
 certifi>=2022
