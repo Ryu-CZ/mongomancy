@@ -8,6 +8,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+## [0.1.15] - 2024-10-30
+
+### Fixed
+
+- support pymongo 4.10+ for changes of collection imports
+
 
 ## [0.1.14] - 2023-09-11
 
